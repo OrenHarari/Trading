@@ -1,0 +1,466 @@
+// This Pine Script™ source code is subject to the terms of the Mozilla Public License 2.0
+// https://mozilla.org/MPL/2.0/
+
+//@version=5
+strategy("BTC 1D Adaptive System v1.0 [H2]", overlay=true,
+     initial_capital=100000,
+     default_qty_type=strategy.percent_of_equity,
+     default_qty_value=100,
+     commission_type=strategy.commission.percent,
+     commission_value=0.05,
+     slippage=5,
+     process_orders_on_close=false,
+     calc_on_every_tick=false,
+     max_bars_back=500,
+     pyramiding=0)
+
+// ============================================================
+// SECTION 1: CONFIGURATION
+// ============================================================
+// --- Regime Detection ---
+group_regime = "Regime Detection"
+i_ema_fast       = input.int(21, "Fast EMA Length", minval=5, maxval=50, group=group_regime)
+i_ema_slow       = input.int(55, "Slow EMA Length", minval=20, maxval=200, group=group_regime)
+i_adx_len        = input.int(14, "ADX Length", minval=7, maxval=30, group=group_regime)
+i_adx_threshold  = input.float(22.0, "ADX Trend Threshold", minval=15.0, maxval=35.0, step=1.0, group=group_regime)
+// OVERFIT RISK: ADX threshold is sensitive — test ±20%
+i_adx_range_th   = input.float(18.0, "ADX Range Threshold", minval=10.0, maxval=25.0, step=1.0, group=group_regime)
+i_vats_lookback  = input.int(20, "VATS Lookback", minval=10, maxval=40, group=group_regime)
+i_vats_trend_th  = input.float(1.5, "VATS Trend Threshold", minval=1.0, maxval=2.5, step=0.1, group=group_regime)
+i_vats_range_th  = input.float(1.0, "VATS Range Threshold", minval=0.5, maxval=1.5, step=0.1, group=group_regime)
+i_regime_persist = input.int(3, "Regime Persistence Bars", minval=1, maxval=10, group=group_regime)
+
+// --- Volatility Regime ---
+group_vol = "Volatility Regime"
+i_atr_len        = input.int(14, "ATR Length", minval=7, maxval=30, group=group_vol)
+i_bb_len         = input.int(20, "BB Length", minval=10, maxval=50, group=group_vol)
+i_bb_mult        = input.float(2.0, "BB Multiplier", minval=1.0, maxval=3.0, step=0.1, group=group_vol)
+i_pctile_lookback = input.int(100, "Percentile Lookback", minval=50, maxval=252, group=group_vol)
+i_vol_high_th    = input.float(75.0, "Vol High Threshold", minval=60.0, maxval=90.0, group=group_vol)
+i_vol_low_th     = input.float(25.0, "Vol Low Threshold", minval=10.0, maxval=40.0, group=group_vol)
+i_squeeze_th     = input.float(15.0, "Squeeze Threshold", minval=5.0, maxval=25.0, group=group_vol)
+i_squeeze_bars   = input.int(6, "Squeeze Min Bars", minval=3, maxval=15, group=group_vol)
+i_kc_len         = input.int(20, "Keltner Length", minval=10, maxval=50, group=group_vol)
+i_kc_mult        = input.float(1.5, "Keltner Multiplier", minval=1.0, maxval=3.0, step=0.1, group=group_vol)
+
+// --- Entry Parameters ---
+group_entry = "Entry Parameters"
+i_rsi_len        = input.int(14, "RSI Length", minval=7, maxval=21, group=group_entry)
+i_rsi_ob         = input.float(70.0, "RSI Overbought", minval=60.0, maxval=85.0, group=group_entry)
+i_rsi_os         = input.float(30.0, "RSI Oversold", minval=15.0, maxval=40.0, group=group_entry)
+i_linreg_len     = input.int(20, "Linear Regression Length", minval=10, maxval=40, group=group_entry)
+
+// --- Risk Management ---
+group_risk = "Risk Management"
+i_atr_stop_mult  = input.float(2.0, "ATR Stop Multiplier", minval=1.0, maxval=4.0, step=0.1, group=group_risk)
+// DANGEROUS PARAM: Stop multiplier directly controls DD — too tight = whipsawed, too wide = large DD
+i_atr_trail_mult = input.float(2.5, "ATR Trail Multiplier", minval=1.5, maxval=5.0, step=0.1, group=group_risk)
+i_target_vol     = input.float(30.0, "Target Annual Vol %", minval=10.0, maxval=60.0, step=5.0, group=group_risk)
+i_max_bars_held  = input.int(60, "Max Bars Held (Trend)", minval=20, maxval=120, group=group_risk)
+i_mr_time_exit   = input.int(10, "MR Time Exit Bars", minval=3, maxval=20, group=group_risk)
+i_mr_stop_mult   = input.float(1.5, "MR ATR Stop Multiplier", minval=0.5, maxval=3.0, step=0.1, group=group_risk)
+i_squeeze_trail   = input.float(3.0, "Squeeze Trail ATR Mult", minval=2.0, maxval=5.0, step=0.1, group=group_risk)
+i_squeeze_stop    = input.float(2.0, "Squeeze Stop ATR Mult", minval=1.0, maxval=4.0, step=0.1, group=group_risk)
+i_squeeze_max_bars = input.int(30, "Squeeze Max Bars", minval=10, maxval=60, group=group_risk)
+i_short_size_mult = input.float(0.5, "Short Size Multiplier", minval=0.1, maxval=1.0, step=0.1, group=group_risk)
+i_mr_size_mult   = input.float(0.7, "MR Size Multiplier", minval=0.3, maxval=1.0, step=0.1, group=group_risk)
+i_warmup_bars    = input.int(400, "Warm-up Bars (no trades)", minval=200, maxval=600, group=group_risk)
+
+// --- Module Toggles (ABLATION testing) ---
+group_ablation = "Ablation Toggles"
+i_enable_trend   = input.bool(true, "Enable Trend Module (T1)", group=group_ablation)
+i_enable_mr      = input.bool(true, "Enable Mean-Reversion Module (M1)", group=group_ablation)
+i_enable_squeeze = input.bool(true, "Enable Squeeze Module (H1)", group=group_ablation)
+i_enable_regime  = input.bool(true, "Enable Regime Filter", group=group_ablation)
+// ABLATION: Disable individual modules to measure marginal contribution
+
+// --- Display ---
+group_display = "Display"
+i_show_regime    = input.bool(true, "Show Regime Background", group=group_display)
+i_show_table     = input.bool(true, "Show Dashboard Table", group=group_display)
+
+// ============================================================
+// SECTION 2: INDICATOR CALCULATIONS
+// ============================================================
+
+// --- Core indicators ---
+ema_fast = ta.ema(close, i_ema_fast)
+ema_slow = ta.ema(close, i_ema_slow)
+
+[diplus, diminus, adx_val] = ta.dmi(i_adx_len, i_adx_len)
+
+atr_val = ta.atr(i_atr_len)
+atr_norm = atr_val / close * 100.0
+
+rsi_val = ta.rsi(close, i_rsi_len)
+
+[bb_mid, bb_upper, bb_lower] = ta.bb(close, i_bb_len, i_bb_mult)
+bb_width = (bb_upper - bb_lower) / bb_mid
+
+// --- Keltner Channel for squeeze detection ---
+kc_basis = ta.ema(close, i_kc_len)
+kc_range = ta.atr(i_kc_len) * i_kc_mult
+kc_upper = kc_basis + kc_range
+kc_lower = kc_basis - kc_range
+
+// --- Linear regression slope (for squeeze direction) ---
+linreg_val = ta.linreg(close, i_linreg_len, 0)
+linreg_prev = ta.linreg(close, i_linreg_len, 1)
+linreg_slope = linreg_val - linreg_prev
+
+// --- Percentile rank function ---
+percentile_rank(float src, int length) =>
+    int count = 0
+    for i = 1 to length
+        if src[i] < src
+            count += 1
+    float(count) / float(length) * 100.0
+
+atr_pctile = percentile_rank(atr_norm, i_pctile_lookback)
+bbw_pctile = percentile_rank(bb_width, i_pctile_lookback)
+vol_score  = (atr_pctile + bbw_pctile) / 2.0
+
+// --- VATS (Volatility-Adjusted Trend Strength) ---
+price_displacement = math.abs(close - nz(close[i_vats_lookback]))
+expected_displacement = math.max(atr_val * math.sqrt(i_vats_lookback), 0.0001)
+vats = price_displacement / expected_displacement
+
+// ============================================================
+// SECTION 3: REGIME CLASSIFICATION
+// ============================================================
+
+// --- Classifier A: Trend/Range via VATS ---
+var int regime_a = 0  // 0=RANGE, 1=BULL_TREND, -1=BEAR_TREND, 2=TRANSITION
+var int regime_a_counter = 0
+
+raw_regime_a = 0
+if vats > i_vats_trend_th and ema_fast > ema_slow and adx_val > i_adx_threshold
+    raw_regime_a := 1   // Bull
+else if vats > i_vats_trend_th and ema_fast < ema_slow and adx_val > i_adx_threshold
+    raw_regime_a := -1  // Bear
+else if vats < i_vats_range_th or adx_val < i_adx_range_th
+    raw_regime_a := 0   // Range
+else
+    raw_regime_a := 2   // Transition
+
+// Persistence filter: require new regime to hold for N bars
+if raw_regime_a == regime_a
+    regime_a_counter := 0
+else
+    regime_a_counter += 1
+    if regime_a_counter >= i_regime_persist
+        regime_a := raw_regime_a
+        regime_a_counter := 0
+
+// --- Classifier B: Volatility Regime ---
+var int regime_b = 0  // 0=VOL_NORMAL, 1=VOL_HIGH, -1=VOL_LOW, 2=VOL_SQUEEZE, 3=VOL_EXPANSION
+
+// Squeeze detection: BB inside KC
+is_squeeze_bar = bb_lower > kc_lower and bb_upper < kc_upper
+var int squeeze_count = 0
+if is_squeeze_bar
+    squeeze_count += 1
+else
+    squeeze_count := 0
+
+squeeze_active = squeeze_count >= i_squeeze_bars
+squeeze_fired = not is_squeeze_bar and squeeze_count[1] >= i_squeeze_bars
+
+// Vol expansion detection
+var int vol_expand_count = 0
+if atr_norm > nz(atr_norm[1])
+    vol_expand_count += 1
+else
+    vol_expand_count := 0
+
+if vol_score > 85.0 and vol_expand_count >= 3
+    regime_b := 3  // VOL_EXPANSION
+else if squeeze_active or vol_score < i_squeeze_th
+    regime_b := 2  // VOL_SQUEEZE
+else if vol_score > i_vol_high_th
+    regime_b := 1  // VOL_HIGH
+else if vol_score < i_vol_low_th
+    regime_b := -1 // VOL_LOW
+else
+    regime_b := 0  // VOL_NORMAL
+
+// ============================================================
+// SECTION 4: POSITION SIZING
+// ============================================================
+
+daily_vol_target = i_target_vol / math.sqrt(365.0)
+base_size_pct = atr_norm > 0 ? (daily_vol_target / atr_norm) * 100.0 : 10.0
+clamped_size = math.max(5.0, math.min(100.0, base_size_pct))
+
+// ============================================================
+// SECTION 5: STRATEGY LOGIC (H2 ADAPTIVE BLEND)
+// ============================================================
+
+// --- State tracking ---
+var int entry_bar = 0
+var float entry_price = 0.0
+var int active_strategy = 0  // 0=none, 1=T1_trend, 2=M1_mr, 3=H1_squeeze
+var float highest_since_entry = 0.0
+var float lowest_since_entry = 0.0
+
+bars_in_trade = bar_index - entry_bar
+in_long = strategy.position_size > 0
+in_short = strategy.position_size < 0
+in_position = in_long or in_short
+
+// Track high/low since entry
+if in_position
+    highest_since_entry := math.max(highest_since_entry, high)
+    lowest_since_entry  := math.min(lowest_since_entry, low)
+else
+    highest_since_entry := high
+    lowest_since_entry  := low
+
+// --- Warm-up gate ---
+can_trade = bar_index >= i_warmup_bars
+
+// --- Determine effective regime ---
+eff_regime = i_enable_regime ? regime_a : 2  // If regime disabled, treat as TRANSITION (allow all)
+
+// === T1: TREND MODULE ===
+t1_long_signal  = ta.crossover(ema_fast, ema_slow) and adx_val > i_adx_threshold
+t1_short_signal = ta.crossunder(ema_fast, ema_slow) and adx_val > i_adx_threshold
+
+t1_long_ok  = i_enable_trend and can_trade and (eff_regime == 1 or not i_enable_regime)  // Bull or unfiltered
+t1_short_ok = i_enable_trend and can_trade and (eff_regime == -1 or not i_enable_regime)  // Bear or unfiltered
+
+t1_enter_long  = t1_long_signal and t1_long_ok and not in_position
+t1_enter_short = t1_short_signal and t1_short_ok and not in_position
+
+// === M1: MEAN-REVERSION MODULE ===
+m1_long_signal  = close < bb_lower and rsi_val < i_rsi_os
+m1_short_signal = close > bb_upper and rsi_val > i_rsi_ob
+
+m1_long_ok  = i_enable_mr and can_trade and (eff_regime == 0 or not i_enable_regime) and vol_score < i_vol_high_th
+m1_short_ok = i_enable_mr and can_trade and (eff_regime == 0 or not i_enable_regime) and vol_score < i_vol_high_th
+
+m1_enter_long  = m1_long_signal and m1_long_ok and not in_position
+m1_enter_short = m1_short_signal and m1_short_ok and not in_position
+
+// === H1: SQUEEZE BREAKOUT MODULE ===
+h1_long_signal  = squeeze_fired and linreg_slope > 0 and close > ema_fast
+h1_short_signal = squeeze_fired and linreg_slope < 0 and close < ema_fast
+
+h1_long_ok  = i_enable_squeeze and can_trade and not in_position
+h1_short_ok = i_enable_squeeze and can_trade and not in_position
+
+h1_enter_long  = h1_long_signal and h1_long_ok
+h1_enter_short = h1_short_signal and h1_short_ok
+
+// ============================================================
+// SECTION 6: EXECUTION — ENTRIES
+// ============================================================
+
+// Priority: H1 (squeeze) > T1 (trend) > M1 (mean-reversion)
+// Squeeze breakouts are rare and high-conviction, so they get priority
+
+if h1_enter_long
+    size = clamped_size
+    strategy.entry("Long", strategy.long, qty=strategy.equity * size / 100.0 / close)
+    entry_bar := bar_index
+    entry_price := close
+    active_strategy := 3
+    highest_since_entry := high
+    lowest_since_entry := low
+else if h1_enter_short
+    size = clamped_size * i_short_size_mult
+    strategy.entry("Short", strategy.short, qty=strategy.equity * size / 100.0 / close)
+    entry_bar := bar_index
+    entry_price := close
+    active_strategy := 3
+    highest_since_entry := high
+    lowest_since_entry := low
+else if t1_enter_long
+    size = clamped_size
+    strategy.entry("Long", strategy.long, qty=strategy.equity * size / 100.0 / close)
+    entry_bar := bar_index
+    entry_price := close
+    active_strategy := 1
+    highest_since_entry := high
+    lowest_since_entry := low
+else if t1_enter_short
+    size = clamped_size * i_short_size_mult
+    strategy.entry("Short", strategy.short, qty=strategy.equity * size / 100.0 / close)
+    entry_bar := bar_index
+    entry_price := close
+    active_strategy := 1
+    highest_since_entry := high
+    lowest_since_entry := low
+else if m1_enter_long
+    size = clamped_size * i_mr_size_mult
+    strategy.entry("Long", strategy.long, qty=strategy.equity * size / 100.0 / close)
+    entry_bar := bar_index
+    entry_price := close
+    active_strategy := 2
+    highest_since_entry := high
+    lowest_since_entry := low
+else if m1_enter_short
+    size = clamped_size * i_mr_size_mult * i_short_size_mult
+    strategy.entry("Short", strategy.short, qty=strategy.equity * size / 100.0 / close)
+    entry_bar := bar_index
+    entry_price := close
+    active_strategy := 2
+    highest_since_entry := high
+    lowest_since_entry := low
+
+// ============================================================
+// SECTION 7: RISK MANAGEMENT — EXITS
+// ============================================================
+
+if in_position
+    // --- T1 Trend Exits ---
+    if active_strategy == 1
+        // Stop loss
+        t1_long_stop  = entry_price - i_atr_stop_mult * atr_val
+        t1_short_stop = entry_price + i_atr_stop_mult * atr_val
+
+        // Trailing stop
+        t1_long_trail  = highest_since_entry - i_atr_trail_mult * atr_val
+        t1_short_trail = lowest_since_entry + i_atr_trail_mult * atr_val
+
+        // Use the higher of stop loss and trailing stop for longs
+        effective_long_stop = math.max(t1_long_stop, t1_long_trail)
+        effective_short_stop = math.min(t1_short_stop, t1_short_trail)
+
+        if in_long
+            if low <= effective_long_stop
+                strategy.close("Long", comment="T1 Stop")
+                active_strategy := 0
+            else if bars_in_trade >= i_max_bars_held
+                strategy.close("Long", comment="T1 Time Exit")
+                active_strategy := 0
+            else if i_enable_regime and eff_regime == 0 and bars_in_trade > 5
+                strategy.close("Long", comment="T1 Regime Exit")
+                active_strategy := 0
+
+        if in_short
+            if high >= effective_short_stop
+                strategy.close("Short", comment="T1 Stop")
+                active_strategy := 0
+            else if bars_in_trade >= i_max_bars_held
+                strategy.close("Short", comment="T1 Time Exit")
+                active_strategy := 0
+            else if i_enable_regime and eff_regime == 0 and bars_in_trade > 5
+                strategy.close("Short", comment="T1 Regime Exit")
+                active_strategy := 0
+
+    // --- M1 Mean-Reversion Exits ---
+    else if active_strategy == 2
+        // Target: BB midline (SMA 20)
+        mr_target = bb_mid
+
+        // Stop loss
+        mr_long_stop  = entry_price - i_mr_stop_mult * atr_val
+        mr_short_stop = entry_price + i_mr_stop_mult * atr_val
+
+        if in_long
+            if close >= mr_target
+                strategy.close("Long", comment="M1 Target")
+                active_strategy := 0
+            else if low <= mr_long_stop
+                strategy.close("Long", comment="M1 Stop")
+                active_strategy := 0
+            else if bars_in_trade >= i_mr_time_exit
+                strategy.close("Long", comment="M1 Time Exit")
+                active_strategy := 0
+            else if i_enable_regime and (eff_regime == 1 or eff_regime == -1)
+                strategy.close("Long", comment="M1 Regime Exit")
+                active_strategy := 0
+
+        if in_short
+            if close <= mr_target
+                strategy.close("Short", comment="M1 Target")
+                active_strategy := 0
+            else if high >= mr_short_stop
+                strategy.close("Short", comment="M1 Stop")
+                active_strategy := 0
+            else if bars_in_trade >= i_mr_time_exit
+                strategy.close("Short", comment="M1 Time Exit")
+                active_strategy := 0
+            else if i_enable_regime and (eff_regime == 1 or eff_regime == -1)
+                strategy.close("Short", comment="M1 Regime Exit")
+                active_strategy := 0
+
+    // --- H1 Squeeze Breakout Exits ---
+    else if active_strategy == 3
+        // Initial stop
+        h1_long_stop  = entry_price - i_squeeze_stop * atr_val
+        h1_short_stop = entry_price + i_squeeze_stop * atr_val
+
+        // Trailing stop (wide — let breakouts run)
+        h1_long_trail  = highest_since_entry - i_squeeze_trail * atr_val
+        h1_short_trail = lowest_since_entry + i_squeeze_trail * atr_val
+
+        effective_h1_long_stop = math.max(h1_long_stop, h1_long_trail)
+        effective_h1_short_stop = math.min(h1_short_stop, h1_short_trail)
+
+        if in_long
+            if low <= effective_h1_long_stop
+                strategy.close("Long", comment="H1 Stop")
+                active_strategy := 0
+            else if bars_in_trade >= i_squeeze_max_bars
+                strategy.close("Long", comment="H1 Time Exit")
+                active_strategy := 0
+
+        if in_short
+            if high >= effective_h1_short_stop
+                strategy.close("Short", comment="H1 Stop")
+                active_strategy := 0
+            else if bars_in_trade >= i_squeeze_max_bars
+                strategy.close("Short", comment="H1 Time Exit")
+                active_strategy := 0
+
+// ============================================================
+// SECTION 8: VISUALIZATION & DIAGNOSTICS
+// ============================================================
+
+// --- Regime background colors ---
+regime_color = i_show_regime ? (regime_a == 1 ? color.new(color.green, 90) : regime_a == -1 ? color.new(color.red, 90) : regime_a == 0 ? color.new(color.gray, 93) : color.new(color.yellow, 93)) : na
+bgcolor(regime_color, title="Regime Background")
+
+// --- EMA plots ---
+plot(ema_fast, "EMA Fast", color=color.blue, linewidth=1)
+plot(ema_slow, "EMA Slow", color=color.orange, linewidth=1)
+
+// --- BB plots ---
+plot(bb_upper, "BB Upper", color=color.new(color.purple, 70))
+plot(bb_mid,   "BB Mid",   color=color.new(color.purple, 85))
+plot(bb_lower, "BB Lower", color=color.new(color.purple, 70))
+
+// --- Squeeze markers ---
+plotshape(squeeze_fired and linreg_slope > 0, "Squeeze Fire Up", shape.triangleup, location.belowbar, color.lime, size=size.small)
+plotshape(squeeze_fired and linreg_slope < 0, "Squeeze Fire Down", shape.triangledown, location.abovebar, color.fuchsia, size=size.small)
+
+// --- Dashboard table ---
+if i_show_table and barstate.islast
+    var table dash = table.new(position.top_right, 2, 10, bgcolor=color.new(color.black, 80), border_width=1)
+
+    regime_text = regime_a == 1 ? "BULL TREND" : regime_a == -1 ? "BEAR TREND" : regime_a == 0 ? "RANGE" : "TRANSITION"
+    vol_text = regime_b == 3 ? "EXPANSION" : regime_b == 2 ? "SQUEEZE" : regime_b == 1 ? "HIGH" : regime_b == -1 ? "LOW" : "NORMAL"
+    strat_text = active_strategy == 1 ? "T1 Trend" : active_strategy == 2 ? "M1 MR" : active_strategy == 3 ? "H1 Squeeze" : "None"
+
+    table.cell(dash, 0, 0, "Metric", text_color=color.white, text_size=size.small)
+    table.cell(dash, 1, 0, "Value", text_color=color.white, text_size=size.small)
+    table.cell(dash, 0, 1, "Regime A", text_color=color.white, text_size=size.small)
+    table.cell(dash, 1, 1, regime_text, text_color=regime_a == 1 ? color.lime : regime_a == -1 ? color.red : color.gray, text_size=size.small)
+    table.cell(dash, 0, 2, "Vol Regime", text_color=color.white, text_size=size.small)
+    table.cell(dash, 1, 2, vol_text, text_color=regime_b >= 2 ? color.yellow : color.white, text_size=size.small)
+    table.cell(dash, 0, 3, "VATS", text_color=color.white, text_size=size.small)
+    table.cell(dash, 1, 3, str.tostring(vats, "#.##"), text_color=color.white, text_size=size.small)
+    table.cell(dash, 0, 4, "ADX", text_color=color.white, text_size=size.small)
+    table.cell(dash, 1, 4, str.tostring(adx_val, "#.#"), text_color=color.white, text_size=size.small)
+    table.cell(dash, 0, 5, "Vol Score", text_color=color.white, text_size=size.small)
+    table.cell(dash, 1, 5, str.tostring(vol_score, "#.#"), text_color=color.white, text_size=size.small)
+    table.cell(dash, 0, 6, "ATR %", text_color=color.white, text_size=size.small)
+    table.cell(dash, 1, 6, str.tostring(atr_norm, "#.##") + "%", text_color=color.white, text_size=size.small)
+    table.cell(dash, 0, 7, "Size %", text_color=color.white, text_size=size.small)
+    table.cell(dash, 1, 7, str.tostring(clamped_size, "#.#") + "%", text_color=color.white, text_size=size.small)
+    table.cell(dash, 0, 8, "Active Strat", text_color=color.white, text_size=size.small)
+    table.cell(dash, 1, 8, strat_text, text_color=color.aqua, text_size=size.small)
+    table.cell(dash, 0, 9, "Bars in Trade", text_color=color.white, text_size=size.small)
+    table.cell(dash, 1, 9, in_position ? str.tostring(bars_in_trade) : "—", text_color=color.white, text_size=size.small)

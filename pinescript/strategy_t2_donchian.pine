@@ -1,0 +1,131 @@
+// This Pine Script™ source code is subject to the terms of the Mozilla Public License 2.0
+// https://mozilla.org/MPL/2.0/
+
+//@version=5
+strategy("BTC 1D T2: Donchian Breakout", overlay=true,
+     initial_capital=100000,
+     default_qty_type=strategy.percent_of_equity,
+     default_qty_value=100,
+     commission_type=strategy.commission.percent,
+     commission_value=0.05,
+     slippage=5,
+     process_orders_on_close=false,
+     calc_on_every_tick=false,
+     max_bars_back=500,
+     pyramiding=0)
+
+// ============================================================
+// CONFIGURATION
+// ============================================================
+group_entry = "Donchian Channels"
+i_entry_len      = input.int(40, "Entry Channel Length", minval=20, maxval=80, group=group_entry)
+i_exit_len       = input.int(20, "Exit Channel Length", minval=10, maxval=40, group=group_entry)
+// OVERFIT RISK: Channel lengths directly determine signal frequency
+
+group_vol = "Volatility Filter"
+i_atr_len        = input.int(14, "ATR Length", group=group_vol)
+i_bb_len         = input.int(20, "BB Length", group=group_vol)
+i_bb_mult        = input.float(2.0, "BB Multiplier", group=group_vol)
+i_pctile_lookback = input.int(100, "Percentile Lookback", group=group_vol)
+i_vol_low_th     = input.float(25.0, "Vol Low Threshold", group=group_vol)
+i_squeeze_th     = input.float(15.0, "Squeeze Threshold (avoid)", group=group_vol)
+
+group_risk = "Risk Management"
+i_atr_stop_mult  = input.float(2.5, "ATR Stop Multiplier", minval=1.0, maxval=5.0, step=0.1, group=group_risk)
+i_target_vol     = input.float(30.0, "Target Annual Vol %", group=group_risk)
+i_short_size_mult = input.float(0.5, "Short Size Multiplier", group=group_risk)
+i_warmup_bars    = input.int(400, "Warm-up Bars", group=group_risk)
+
+i_enable_vol_filter = input.bool(true, "Enable Vol Filter", group="Ablation")
+
+// ============================================================
+// INDICATORS
+// ============================================================
+atr_val = ta.atr(i_atr_len)
+atr_norm = atr_val / close * 100.0
+
+// Donchian Channels
+entry_high = ta.highest(high, i_entry_len)
+entry_low  = ta.lowest(low, i_entry_len)
+exit_high  = ta.highest(high, i_exit_len)
+exit_low   = ta.lowest(low, i_exit_len)
+
+// Volatility regime
+[bb_mid, bb_upper, bb_lower] = ta.bb(close, i_bb_len, i_bb_mult)
+bb_width = (bb_upper - bb_lower) / bb_mid
+
+percentile_rank(float src, int length) =>
+    int count = 0
+    for i = 1 to length
+        if src[i] < src
+            count += 1
+    float(count) / float(length) * 100.0
+
+atr_pctile = percentile_rank(atr_norm, i_pctile_lookback)
+bbw_pctile = percentile_rank(bb_width, i_pctile_lookback)
+vol_score  = (atr_pctile + bbw_pctile) / 2.0
+
+// ============================================================
+// POSITION SIZING
+// ============================================================
+daily_vol_target = i_target_vol / math.sqrt(365.0)
+base_size_pct = atr_norm > 0 ? (daily_vol_target / atr_norm) * 100.0 : 10.0
+clamped_size = math.max(5.0, math.min(100.0, base_size_pct))
+
+// ============================================================
+// STRATEGY LOGIC — T2 Donchian Breakout
+// ============================================================
+can_trade = bar_index >= i_warmup_bars
+vol_ok = not i_enable_vol_filter or vol_score >= i_vol_low_th
+
+var int entry_bar = 0
+var float entry_price = 0.0
+
+in_long = strategy.position_size > 0
+in_short = strategy.position_size < 0
+in_position = in_long or in_short
+
+// --- Entries ---
+// Breakout above 40-bar high
+long_signal  = close > entry_high[1] and vol_ok
+// Breakdown below 40-bar low
+short_signal = close < entry_low[1] and vol_ok
+
+if long_signal and can_trade and not in_position
+    strategy.entry("Long", strategy.long, qty=strategy.equity * clamped_size / 100.0 / close)
+    entry_bar := bar_index
+    entry_price := close
+
+if short_signal and can_trade and not in_position
+    size = clamped_size * i_short_size_mult
+    strategy.entry("Short", strategy.short, qty=strategy.equity * size / 100.0 / close)
+    entry_bar := bar_index
+    entry_price := close
+
+// --- Exits ---
+if in_long
+    // Channel exit: close below 20-bar low
+    if close < exit_low[1]
+        strategy.close("Long", comment="T2 Channel Exit")
+    // Hard stop
+    else if low <= entry_price - i_atr_stop_mult * atr_val
+        strategy.close("Long", comment="T2 Stop")
+    // Vol squeeze exit
+    else if i_enable_vol_filter and vol_score < i_squeeze_th
+        strategy.close("Long", comment="T2 Vol Exit")
+
+if in_short
+    if close > exit_high[1]
+        strategy.close("Short", comment="T2 Channel Exit")
+    else if high >= entry_price + i_atr_stop_mult * atr_val
+        strategy.close("Short", comment="T2 Stop")
+    else if i_enable_vol_filter and vol_score < i_squeeze_th
+        strategy.close("Short", comment="T2 Vol Exit")
+
+// ============================================================
+// VISUALIZATION
+// ============================================================
+plot(entry_high, "Entry High", color=color.new(color.green, 50), linewidth=1)
+plot(entry_low,  "Entry Low",  color=color.new(color.red, 50), linewidth=1)
+plot(exit_high,  "Exit High",  color=color.new(color.green, 80), style=plot.style_stepline)
+plot(exit_low,   "Exit Low",   color=color.new(color.red, 80), style=plot.style_stepline)

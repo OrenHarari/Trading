@@ -1,0 +1,163 @@
+// This Pine Script™ source code is subject to the terms of the Mozilla Public License 2.0
+// https://mozilla.org/MPL/2.0/
+
+//@version=5
+strategy("BTC 1D T1: Dual EMA + ADX Trend", overlay=true,
+     initial_capital=100000,
+     default_qty_type=strategy.percent_of_equity,
+     default_qty_value=100,
+     commission_type=strategy.commission.percent,
+     commission_value=0.05,
+     slippage=5,
+     process_orders_on_close=false,
+     calc_on_every_tick=false,
+     max_bars_back=500,
+     pyramiding=0)
+
+// ============================================================
+// CONFIGURATION
+// ============================================================
+group_regime = "Regime Detection"
+i_ema_fast       = input.int(21, "Fast EMA", minval=5, maxval=50, group=group_regime)
+i_ema_slow       = input.int(55, "Slow EMA", minval=20, maxval=200, group=group_regime)
+i_adx_len        = input.int(14, "ADX Length", minval=7, maxval=30, group=group_regime)
+i_adx_threshold  = input.float(22.0, "ADX Threshold", minval=15.0, maxval=35.0, group=group_regime)
+i_adx_range_th   = input.float(18.0, "ADX Range Threshold", minval=10.0, maxval=25.0, group=group_regime)
+i_vats_lookback  = input.int(20, "VATS Lookback", minval=10, maxval=40, group=group_regime)
+i_vats_trend_th  = input.float(1.5, "VATS Trend Threshold", minval=1.0, maxval=2.5, group=group_regime)
+i_vats_range_th  = input.float(1.0, "VATS Range Threshold", group=group_regime)
+i_regime_persist = input.int(3, "Regime Persistence Bars", minval=1, maxval=10, group=group_regime)
+
+group_risk = "Risk Management"
+i_atr_len        = input.int(14, "ATR Length", group=group_risk)
+i_atr_stop_mult  = input.float(2.0, "ATR Stop Multiplier", minval=1.0, maxval=4.0, step=0.1, group=group_risk)
+i_atr_trail_mult = input.float(2.5, "ATR Trail Multiplier", minval=1.5, maxval=5.0, step=0.1, group=group_risk)
+i_target_vol     = input.float(30.0, "Target Annual Vol %", group=group_risk)
+i_max_bars_held  = input.int(60, "Max Bars Held", minval=20, maxval=120, group=group_risk)
+i_short_size_mult = input.float(0.5, "Short Size Multiplier", group=group_risk)
+i_warmup_bars    = input.int(400, "Warm-up Bars", group=group_risk)
+
+i_enable_regime  = input.bool(true, "Enable Regime Filter", group="Ablation")
+
+// ============================================================
+// INDICATORS
+// ============================================================
+ema_fast = ta.ema(close, i_ema_fast)
+ema_slow = ta.ema(close, i_ema_slow)
+[diplus, diminus, adx_val] = ta.dmi(i_adx_len, i_adx_len)
+atr_val = ta.atr(i_atr_len)
+atr_norm = atr_val / close * 100.0
+
+// VATS
+price_displacement = math.abs(close - nz(close[i_vats_lookback]))
+expected_displacement = math.max(atr_val * math.sqrt(i_vats_lookback), 0.0001)
+vats = price_displacement / expected_displacement
+
+// ============================================================
+// REGIME (Classifier A only)
+// ============================================================
+var int regime_a = 0
+var int regime_a_counter = 0
+
+raw_regime_a = 0
+if vats > i_vats_trend_th and ema_fast > ema_slow and adx_val > i_adx_threshold
+    raw_regime_a := 1
+else if vats > i_vats_trend_th and ema_fast < ema_slow and adx_val > i_adx_threshold
+    raw_regime_a := -1
+else if vats < i_vats_range_th or adx_val < i_adx_range_th
+    raw_regime_a := 0
+else
+    raw_regime_a := 2
+
+if raw_regime_a == regime_a
+    regime_a_counter := 0
+else
+    regime_a_counter += 1
+    if regime_a_counter >= i_regime_persist
+        regime_a := raw_regime_a
+        regime_a_counter := 0
+
+// ============================================================
+// POSITION SIZING
+// ============================================================
+daily_vol_target = i_target_vol / math.sqrt(365.0)
+base_size_pct = atr_norm > 0 ? (daily_vol_target / atr_norm) * 100.0 : 10.0
+clamped_size = math.max(5.0, math.min(100.0, base_size_pct))
+
+// ============================================================
+// STRATEGY LOGIC — T1 Dual EMA Crossover + ADX
+// ============================================================
+can_trade = bar_index >= i_warmup_bars
+eff_regime = i_enable_regime ? regime_a : 2
+
+var int entry_bar = 0
+var float entry_price = 0.0
+var float highest_since_entry = 0.0
+var float lowest_since_entry = 0.0
+
+in_long = strategy.position_size > 0
+in_short = strategy.position_size < 0
+in_position = in_long or in_short
+bars_in_trade = bar_index - entry_bar
+
+if in_position
+    highest_since_entry := math.max(highest_since_entry, high)
+    lowest_since_entry  := math.min(lowest_since_entry, low)
+else
+    highest_since_entry := high
+    lowest_since_entry  := low
+
+// --- Entries ---
+long_signal  = ta.crossover(ema_fast, ema_slow) and adx_val > i_adx_threshold
+short_signal = ta.crossunder(ema_fast, ema_slow) and adx_val > i_adx_threshold
+
+long_ok  = can_trade and (eff_regime == 1 or not i_enable_regime) and not in_position
+short_ok = can_trade and (eff_regime == -1 or not i_enable_regime) and not in_position
+
+if long_signal and long_ok
+    strategy.entry("Long", strategy.long, qty=strategy.equity * clamped_size / 100.0 / close)
+    entry_bar := bar_index
+    entry_price := close
+    highest_since_entry := high
+    lowest_since_entry := low
+
+if short_signal and short_ok
+    size = clamped_size * i_short_size_mult
+    strategy.entry("Short", strategy.short, qty=strategy.equity * size / 100.0 / close)
+    entry_bar := bar_index
+    entry_price := close
+    highest_since_entry := high
+    lowest_since_entry := low
+
+// --- Exits ---
+if in_long
+    stop_level = entry_price - i_atr_stop_mult * atr_val
+    trail_level = highest_since_entry - i_atr_trail_mult * atr_val
+    effective_stop = math.max(stop_level, trail_level)
+
+    if low <= effective_stop
+        strategy.close("Long", comment="T1 Stop")
+    else if bars_in_trade >= i_max_bars_held
+        strategy.close("Long", comment="T1 Time Exit")
+    else if i_enable_regime and eff_regime == 0 and bars_in_trade > 5
+        strategy.close("Long", comment="T1 Regime Exit")
+
+if in_short
+    stop_level = entry_price + i_atr_stop_mult * atr_val
+    trail_level = lowest_since_entry + i_atr_trail_mult * atr_val
+    effective_stop = math.min(stop_level, trail_level)
+
+    if high >= effective_stop
+        strategy.close("Short", comment="T1 Stop")
+    else if bars_in_trade >= i_max_bars_held
+        strategy.close("Short", comment="T1 Time Exit")
+    else if i_enable_regime and eff_regime == 0 and bars_in_trade > 5
+        strategy.close("Short", comment="T1 Regime Exit")
+
+// ============================================================
+// VISUALIZATION
+// ============================================================
+regime_color = regime_a == 1 ? color.new(color.green, 90) : regime_a == -1 ? color.new(color.red, 90) : regime_a == 0 ? color.new(color.gray, 93) : color.new(color.yellow, 93)
+bgcolor(regime_color, title="Regime")
+plot(ema_fast, "EMA Fast", color=color.blue, linewidth=1)
+plot(ema_slow, "EMA Slow", color=color.orange, linewidth=1)
