@@ -1,0 +1,2 @@
+OK: return=-8.3% trades=65
+TEST COMPLETE

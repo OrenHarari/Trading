@@ -1,0 +1,177 @@
+======================================================================
+  BTC/USD Strategy Optimizer
+  Real OHLC Data from Yahoo Finance (no fake data)
+======================================================================
+
+[1/5] Loading real OHLC data from Yahoo Finance...
+  Total bars: 4167 (2014-09-17 → 2026-02-12)
+
+[2/5] Splitting data: IS (→ 2022-01-01) / OOS (2022-01-01 →)
+  IS:  2663 bars (2014-09-17 → 2021-12-31)
+  OOS: 1504 bars (2022-01-01 → 2026-02-12)
+
+[3/5] Running 2300 strategy+config combinations on IS data...
+  Strategies: T1, M1, RSI, MACD, SMA, MOM, DIP, DON
+  Config presets: 5
+  [200/2300] best IS return so far: +2159.4% (54s elapsed, ~567s remaining)
+  [400/2300] best IS return so far: +2159.4% (109s elapsed, ~519s remaining)
+  [600/2300] best IS return so far: +2159.4% (166s elapsed, ~472s remaining)
+  [800/2300] best IS return so far: +2159.4% (225s elapsed, ~422s remaining)
+  [1000/2300] best IS return so far: +5654.7% (282s elapsed, ~366s remaining)
+  [1200/2300] best IS return so far: +6926.5% (335s elapsed, ~307s remaining)
+  [1400/2300] best IS return so far: +11233.4% (391s elapsed, ~251s remaining)
+  [1600/2300] best IS return so far: +13547.7% (445s elapsed, ~195s remaining)
+  [1800/2300] best IS return so far: +13547.7% (497s elapsed, ~138s remaining)
+  [2000/2300] best IS return so far: +13547.7% (550s elapsed, ~82s remaining)
+  [2200/2300] best IS return so far: +13547.7% (602s elapsed, ~27s remaining)
+
+  Completed 2300 runs in 628.2s (4 runs/sec)
+  Valid results: 2290 (trades >= 8)
+
+  Results with IS return >= 15.0%: 1499
+
+==========================================================================================
+  TOP 80 IN-SAMPLE RESULTS (sorted by return)
+==========================================================================================
+  # Strat    Return      PF   Sharpe   MaxDD  Trades   WinR    CAGR   Config
+------------------------------------------------------------------------------------------
+  1 DON   +16365.1%  10.015    4.031   49.5%      29  62.1% +101.4%     v80L
+  2 DON   +15591.4%   4.136    2.811   46.5%      51  51.0% +100.1%     v80S
+  3 DON   +14516.9%  11.706    4.123   43.9%      25  68.0%  +98.2%     v80L
+  4 DON   +13642.2%   3.754    2.491   46.8%      56  50.0%  +96.5%     v80S
+  5 MOM   +13547.7%   8.856    3.703   54.6%      29  65.5%  +96.3%     v80L
+  6 MOM   +13466.7%   7.214    3.515   47.4%      33  60.6%  +96.2%     v80L
+  7 DON   +12488.1%   6.592    4.183   60.4%      26  69.2%  +94.2%     v80L
+  8 DON   +11269.3%   4.122    2.581   41.2%      45  55.6%  +91.5%     v80S
+  9 MOM   +11233.4%   5.803    3.050   38.3%      46  54.3%  +91.4%     v80L
+ 10 MOM   +11214.1%   5.336    2.483   50.0%      59  55.9%  +91.3%     v80L
+ 11 MOM   +10560.2%   8.114    3.609   39.0%      29  62.1%  +89.8%     v80L
+ 12 DON   +10487.3%   5.633    3.776   54.5%      29  58.6%  +89.6%     v80L
+ 13 MOM    +9916.9%   5.243    2.595   34.8%      66  48.5%  +88.2%     v80L
+ 14 MOM    +9866.8%   5.585    3.113   57.8%      42  47.6%  +88.0%     v80L
+ 15 MOM    +9602.4%   6.986    3.674   47.1%      29  62.1%  +87.3%     v80L
+ 16 MOM    +9461.3%   9.401    3.791   38.6%      25  64.0%  +87.0%     v80L
+ 17 MOM    +9423.4%   4.947    2.069   47.5%      84  45.2%  +86.9%     v80L
+ 18 MOM    +9368.0%   8.805    4.130   36.5%      25  72.0%  +86.7%     v80L
+ 19 MOM    +9237.6%   6.429    3.100   46.2%      42  59.5%  +86.3%     v80L
+ 20 MOM    +9200.0%   8.679    3.073   38.3%      39  53.8%  +86.2%     v80L
+ 21 MOM    +9046.6%   6.201    2.761   47.0%      45  60.0%  +85.8%     v80L
+ 22 DON    +9005.7%   6.592    4.183   47.6%      26  69.2%  +85.7%     v50L
+ 23 MOM    +8616.0%   8.119    3.886   40.1%      25  68.0%  +84.6%     v80L
+ 24 MOM    +8448.0%   7.235    3.386   35.0%      35  62.9%  +84.1%     v80L
+ 25 MOM    +8401.9%   4.772    3.716   42.0%      57  56.1%  +84.0%     v80L
+ 26 MOM    +8401.9%   4.772    3.716   42.0%      57  56.1%  +84.0%     v80S
+ 27 MOM    +8296.3%   6.767    3.499   48.7%      32  53.1%  +83.7%     v80L
+ 28 MOM    +8123.6%   9.562    4.191   35.8%      23  73.9%  +83.1%     v80L
+ 29 MOM    +8065.6%   6.505    2.727   37.8%      50  52.0%  +83.0%     v80L
+ 30 MOM    +8054.6%   7.668    3.462   54.5%      28  57.1%  +82.9%     v80L
+
+[4/5] Validating top 80 results on OOS data (2022-01-01 → end)...
+
+==============================================================================================================
+  FINAL RESULTS — IS + OOS VALIDATED (sorted by combined score)
+==============================================================================================================
+  # Strat    IS Ret   OOS Ret   IS PF  OOS PF   IS DD  OOS DD  IS Tr OOS Tr   Config Params
+--------------------------------------------------------------------------------------------------------------
+  1 DON   +16365.1%     +7.8%  10.015   1.293   49.5%   42.9%     29     22     v80L  entry_len=20 exit_len=20
+  2 DON   +15591.4%     -2.1%   4.136   0.916   46.5%   43.5%     51     37     v80S  entry_len=20 exit_len=30
+  3 DON   +14516.9%     +7.2%  11.706   1.305   43.9%   38.5%     25     18     v80L  entry_len=30 exit_len=20
+  4 MOM   +13547.7%    +69.8%   8.856   1.978   54.6%   36.1%     29     14     v80L  roc_len=30 roc_threshold=10 roc_exit=-5 use_sma_filter=0
+  5 MOM   +13466.7%   +105.6%   7.214   2.406   47.4%   36.2%     33     16     v80L  roc_len=30 roc_threshold=10 roc_exit=0 use_sma_filter=0
+  6 DON   +13642.2%    -21.7%   3.754   0.781   46.8%   55.4%     56     39     v80S  entry_len=20 exit_len=20
+  7 DON   +12488.1%    +17.4%   6.592   1.442   60.4%   41.8%     26     16     v80L  entry_len=30 exit_len=30
+  8 MOM   +11233.4%   +103.5%   5.803   2.077   38.3%   44.6%     46     18     v80L  roc_len=20 roc_threshold=5 roc_exit=-5 use_sma_filter=0
+  9 MOM   +11214.1%    +76.5%   5.336   1.782   50.0%   38.0%     59     31     v80L  roc_len=30 roc_threshold=5 roc_exit=0 use_sma_filter=0
+ 10 DON   +11269.3%    -23.7%   4.122   0.671   41.2%   48.8%     45     31     v80S  entry_len=30 exit_len=20
+ 11 MOM   +10560.2%   +140.6%   8.114   3.160   39.0%   36.2%     29     13     v80L  roc_len=30 roc_threshold=10 roc_exit=0 use_sma_filter=1
+ 12 DON   +10487.3%    +24.3%   5.633   1.484   54.5%   34.1%     29     19     v80L  entry_len=30 exit_len=20
+ 13 MOM    +9866.8%   +118.8%   5.585   2.304   57.8%   39.0%     42     19     v80L  roc_len=30 roc_threshold=5 roc_exit=-5 use_sma_filter=0
+ 14 MOM    +9916.9%    +79.5%   5.243   1.867   34.8%   35.5%     66     31     v80L  roc_len=20 roc_threshold=5 roc_exit=0 use_sma_filter=0
+ 15 MOM    +9602.4%   +179.7%   6.986   9.953   47.1%   15.6%     29     10     v80L  roc_len=30 roc_threshold=15 roc_exit=0 use_sma_filter=0
+ 16 MOM    +9461.3%   +114.0%   9.401   2.808   38.6%   36.1%     25     12     v80L  roc_len=30 roc_threshold=10 roc_exit=-5 use_sma_filter=1
+ 17 MOM    +9368.0%   +135.2%   8.805  12.227   36.5%   15.3%     25      8     v80L  roc_len=30 roc_threshold=20 roc_exit=0 use_sma_filter=0
+ 18 MOM    +9423.4%    +41.4%   4.947   1.478   47.5%   43.1%     84     49     v80L  roc_len=30 roc_threshold=5 roc_exit=5 use_sma_filter=0
+ 19 MOM    +9200.0%   +143.9%   8.679   3.179   38.3%   30.3%     39     15     v80L  roc_len=50 roc_threshold=5 roc_exit=0 use_sma_filter=1
+ 20 MOM    +9237.6%    +84.5%   6.429   2.194   46.2%   31.8%     42     20     v80L  roc_len=30 roc_threshold=10 roc_exit=5 use_sma_filter=0
+ 21 MOM    +9046.6%   +196.8%   6.201   3.574   47.0%   33.0%     45     16     v80L  roc_len=30 roc_threshold=5 roc_exit=0 use_sma_filter=1
+ 22 DON    +9005.7%    +29.6%   6.592   1.442   47.6%   32.0%     26     16     v50L  entry_len=30 exit_len=30
+ 23 MOM    +8616.0%   +166.4%   8.119  11.544   40.1%   15.3%     25      9     v80L  roc_len=30 roc_threshold=15 roc_exit=0 use_sma_filter=1
+ 24 MOM    +8296.3%   +188.4%   6.767   4.485   48.7%   34.4%     32     12     v80L  roc_len=30 roc_threshold=5 roc_exit=-5 use_sma_filter=1
+ 25 MOM    +8448.0%    +62.0%   7.235   1.814   35.0%   49.1%     35     15     v80L  roc_len=20 roc_threshold=10 roc_exit=-5 use_sma_filter=0
+ 26 MOM    +8401.9%    +73.5%   4.772   1.850   42.0%   42.3%     57     22     v80L  roc_len=20 roc_threshold=5 roc_exit=-5 use_sma_filter=0
+ 27 MOM    +8401.9%    +73.5%   4.772   1.850   42.0%   42.3%     57     22     v80S  roc_len=20 roc_threshold=5 roc_exit=-5 use_sma_filter=0
+ 28 MOM    +8065.6%   +119.5%   6.505   2.736   37.8%   31.5%     50     29     v80L  roc_len=50 roc_threshold=5 roc_exit=5 use_sma_filter=1
+ 29 MOM    +8054.6%   +110.7%   7.668   3.898   54.5%   17.6%     28     10     v80L  roc_len=30 roc_threshold=15 roc_exit=-5 use_sma_filter=0
+ 30 MOM    +7807.1%   +158.9%   7.094   3.143   42.1%   45.7%     35     13     v80L  roc_len=20 roc_threshold=5 roc_exit=-5 use_sma_filter=1
+
+==============================================================================================================
+  ★ PROFITABLE STRATEGIES (positive IS AND OOS): 74
+==============================================================================================================
+
+  #1: DON — IS: +16365.1% | OOS: +7.8%
+       IS:  PF=10.015 Sharpe=4.031 MaxDD=49.5% Trades=29 WinRate=62.1%
+       OOS: PF=1.293 Sharpe=0.819 MaxDD=42.9% Trades=22 WinRate=36.4%
+       Config: vol=80%, stop=3.0, trail=4.0, long-only
+       Params: entry_len=20, exit_len=20
+
+  #2: DON — IS: +14516.9% | OOS: +7.2%
+       IS:  PF=11.706 Sharpe=4.123 MaxDD=43.9% Trades=25 WinRate=68.0%
+       OOS: PF=1.305 Sharpe=0.839 MaxDD=38.5% Trades=18 WinRate=33.3%
+       Config: vol=80%, stop=3.0, trail=4.0, long-only
+       Params: entry_len=30, exit_len=20
+
+  #3: MOM — IS: +13547.7% | OOS: +69.8%
+       IS:  PF=8.856 Sharpe=3.703 MaxDD=54.6% Trades=29 WinRate=65.5%
+       OOS: PF=1.978 Sharpe=2.308 MaxDD=36.1% Trades=14 WinRate=42.9%
+       Config: vol=80%, stop=2.0, trail=5.0, long-only
+       Params: roc_len=30, roc_threshold=10, roc_exit=-5, use_sma_filter=0
+
+  #4: MOM — IS: +13466.7% | OOS: +105.6%
+       IS:  PF=7.214 Sharpe=3.515 MaxDD=47.4% Trades=33 WinRate=60.6%
+       OOS: PF=2.406 Sharpe=2.647 MaxDD=36.2% Trades=16 WinRate=43.8%
+       Config: vol=80%, stop=2.0, trail=5.0, long-only
+       Params: roc_len=30, roc_threshold=10, roc_exit=0, use_sma_filter=0
+
+  #5: DON — IS: +12488.1% | OOS: +17.4%
+       IS:  PF=6.592 Sharpe=4.183 MaxDD=60.4% Trades=26 WinRate=69.2%
+       OOS: PF=1.442 Sharpe=1.221 MaxDD=41.8% Trades=16 WinRate=43.8%
+       Config: vol=80%, stop=2.0, trail=2.5, long-only
+       Params: entry_len=30, exit_len=30
+
+  #6: MOM — IS: +11233.4% | OOS: +103.5%
+       IS:  PF=5.803 Sharpe=3.050 MaxDD=38.3% Trades=46 WinRate=54.3%
+       OOS: PF=2.077 Sharpe=2.274 MaxDD=44.6% Trades=18 WinRate=33.3%
+       Config: vol=80%, stop=2.0, trail=5.0, long-only
+       Params: roc_len=20, roc_threshold=5, roc_exit=-5, use_sma_filter=0
+
+  #7: MOM — IS: +11214.1% | OOS: +76.5%
+       IS:  PF=5.336 Sharpe=2.483 MaxDD=50.0% Trades=59 WinRate=55.9%
+       OOS: PF=1.782 Sharpe=1.495 MaxDD=38.0% Trades=31 WinRate=38.7%
+       Config: vol=80%, stop=2.0, trail=5.0, long-only
+       Params: roc_len=30, roc_threshold=5, roc_exit=0, use_sma_filter=0
+
+  #8: MOM — IS: +10560.2% | OOS: +140.6%
+       IS:  PF=8.114 Sharpe=3.609 MaxDD=39.0% Trades=29 WinRate=62.1%
+       OOS: PF=3.160 Sharpe=3.573 MaxDD=36.2% Trades=13 WinRate=46.2%
+       Config: vol=80%, stop=2.0, trail=5.0, long-only
+       Params: roc_len=30, roc_threshold=10, roc_exit=0, use_sma_filter=1
+
+  #9: DON — IS: +10487.3% | OOS: +24.3%
+       IS:  PF=5.633 Sharpe=3.776 MaxDD=54.5% Trades=29 WinRate=58.6%
+       OOS: PF=1.484 Sharpe=1.204 MaxDD=34.1% Trades=19 WinRate=36.8%
+       Config: vol=80%, stop=2.0, trail=2.5, long-only
+       Params: entry_len=30, exit_len=20
+
+  #10: MOM — IS: +9866.8% | OOS: +118.8%
+       IS:  PF=5.585 Sharpe=3.113 MaxDD=57.8% Trades=42 WinRate=47.6%
+       OOS: PF=2.304 Sharpe=2.508 MaxDD=39.0% Trades=19 WinRate=42.1%
+       Config: vol=80%, stop=2.0, trail=5.0, long-only
+       Params: roc_len=30, roc_threshold=5, roc_exit=-5, use_sma_filter=0
+==============================================================================================================
+
+[5/5] Buy & Hold benchmark:
+  IS: Return=+10788.2% MaxDD=83.4%
+  OOS: Return=+39.6% MaxDD=66.7%
+  Full: Return=+15471.0% MaxDD=83.4%
+
+Done.

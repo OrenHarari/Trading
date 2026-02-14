@@ -1,0 +1,58 @@
+nohup: ignoring input
+Starting 2H optimization...
+
+======================================================================
+  BTC/USD 2H Optimizer — LONG + SHORT
+======================================================================
+  Bars: 4305 | 2025-02-13 20:00:00 → 2026-02-13 20:00:00
+  Price range: $62,979 — $125,424
+  IS: 2916 bars (2025-02-13 → 2025-10-14)
+  OOS: 1389 bars (2025-10-14 → 2026-02-13)
+  Resuming: 1 strategies already done
+
+  Total combos: 1450
+
+  >> M1: 180 combos... done in 59s | best IS: +0.5% | valid: 180
+
+  >> RSI: 60 combos... done in 20s | best IS: +8.7% | valid: 60
+
+  >> MACD: 40 combos... done in 13s | best IS: +7.4% | valid: 40
+
+  >> SMA: 30 combos... done in 9s | best IS: +18.0% | valid: 30
+
+  >> MOM: 270 combos... done in 81s | best IS: +7.0% | valid: 270
+
+  >> DIP: 270 combos... done in 99s | best IS: +36.3% | valid: 270
+
+  >> DON: 30 combos... done in 13s | best IS: -6.3% | valid: 30
+
+  >> BKD: 160 combos... done in 72s | best IS: +10.0% | valid: 160
+
+  >> STR: 160 combos... done in 72s | best IS: +1.3% | valid: 160
+
+  >> MP: 160 combos... done in 84s | best IS: +10.1% | valid: 160
+
+  IS sweep done: 962 valid results in 523s
+  Top 80 for OOS validation...
+
+  Results saved to optimizer_2h_short_results.txt
+✅ Done!
+dy done
+
+  Total combos: 1450
+
+  >> DIP: 270 combos... done in 106s | best IS: +36.3% | valid: 270
+
+  >> DON: 30 combos... done in 14s | best IS: -6.3% | valid: 30
+
+  >> BKD: 160 combos... done in 70s | best IS: +10.0% | valid: 160
+
+  >> STR: 160 combos... done in 68s | best IS: +1.3% | valid: 160
+
+  >> MP: 160 combos... done in 71s | best IS: +10.1% | valid: 160
+
+  IS sweep done: 962 valid results in 329s
+  Top 80 for OOS validation...
+
+  Results saved to optimizer_2h_short_results.txt
+✅ Done!

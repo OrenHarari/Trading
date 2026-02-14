@@ -1,0 +1,9 @@
+PROCESS: NOT RUNNING
+LOG: 58 lines, last modified 458s ago
+    IS sweep done: 962 valid results in 329s
+    Top 80 for OOS validation...
+  
+    Results saved to optimizer_2h_short_results.txt
+  ✅ Done!
+PROGRESS: NOT FOUND
+RESULTS: AVAILABLE (9824 bytes)

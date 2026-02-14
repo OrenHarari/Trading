@@ -1,0 +1,2 @@
+trade_id,entry_date,exit_date,direction,strategy,entry_price,exit_price,size_pct,profit_pct,profit_usd,bars_held,exit_reason
+1,2021-02-04,2026-02-13,long,B&H,37532.21234222886,66118.39307704975,100,76.1644,76164.39,1835,End of Data

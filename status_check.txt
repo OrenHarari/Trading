@@ -1,0 +1,24 @@
+LOG_SIZE_BYTES: 1559
+PYTHON_PROCS: 5
+  6238 python dashboard.py
+  84617 python -u optimizer_short.py 2h
+  86577 python optimizer_short.py 2h
+  86622 python optimizer_short.py 2h
+  91696 python check_status.py
+
+LOG_LINES: 40
+LAST 10 LINES:
+    STR: 972 combos
+    MP: 648 combos
+  Config presets: 6 (short_size_mult up to 1.2)
+  >> T1 done in 87s
+  [500/4230] best IS: +14.9% (180s, ~1342s left)
+  >> M1 done in 95s
+  >> RSI done in 78s
+  >> MACD done in 70s
+  >> SMA done in 22s
+  [1000/4230] best IS: +18.0% (400s, ~1292s left)
+
+optimizer_2h_short_results.txt: NOT FOUND
+
+optimizer_4h_short_results.txt: NOT FOUND

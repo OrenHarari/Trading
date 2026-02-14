@@ -1,0 +1,127 @@
+======================================================================
+  BTC/USD 4-Hour Strategy Optimizer
+  Real OHLC: Yahoo Finance 1h → 4h resample (last 1 year)
+======================================================================
+
+[1/5] Loading 4h BTC/USD data...
+  Total 4h bars: 2155
+  Date range: 2025-02-13 20:00:00 → 2026-02-13 20:00:00
+  Price range: $62,979 → $125,424
+
+[2/5] Data Split:
+  IS  (8mo): 1458 bars (2025-02-13 → 2025-10-14)
+  OOS (4mo): 697 bars (2025-10-14 → 2026-02-13)
+
+[3/5] Running 3630 combinations on IS data...
+  Strategies: T1, M1, RSI, MACD, SMA, MOM, DIP, DON
+  Config presets: 5
+  [500/3630] best IS return: +29.5% (75s elapsed, ~467s remaining)
+  [1000/3630] best IS return: +29.5% (154s elapsed, ~405s remaining)
+  [1500/3630] best IS return: +29.5% (230s elapsed, ~327s remaining)
+  [2000/3630] best IS return: +29.5% (303s elapsed, ~247s remaining)
+  [2500/3630] best IS return: +29.5% (373s elapsed, ~168s remaining)
+  [3000/3630] best IS return: +29.5% (439s elapsed, ~92s remaining)
+  [3500/3630] best IS return: +29.5% (506s elapsed, ~19s remaining)
+
+  Completed 3630 runs in 524.6s (7 runs/sec)
+  Valid results: 2344 (trades >= 6)
+
+  Results with IS return >= 5.0%: 1027
+
+===============================================================================================
+  TOP 30 IN-SAMPLE RESULTS (sorted by return)
+===============================================================================================
+  # Strat    Return      PF   Sharpe   MaxDD  Trades   WinR    CAGR   Config
+-----------------------------------------------------------------------------------------------
+  1 T1       +29.5%   1.900    0.817    5.5%      14  42.9%  +47.7%     v80L
+  2 DON      +27.8%   3.726    1.574    9.7%      10  60.0%  +44.8%     v80L
+  3 DIP      +27.3%   1.800    1.147   14.8%      26  34.6%  +43.9%     v80L
+  4 DON      +27.1%   3.747    1.405    9.3%       8  62.5%  +43.7%     v80L
+  5 DIP      +27.1%   1.603    1.229   11.8%      36  44.4%  +43.6%     v80L
+  6 MACD     +26.0%   1.533    1.126   10.6%      47  44.7%  +41.7%     v80L
+  7 DIP      +25.7%   3.609    2.092    6.5%      11  72.7%  +41.2%     v80L
+  8 DIP      +25.7%   3.609    2.092    6.5%      11  72.7%  +41.2%     v80S
+  9 DIP      +24.9%   1.800    1.091   15.2%      19  47.4%  +40.0%     v80L
+ 10 MACD     +24.0%   1.133    0.383   10.9%      72  34.7%  +38.3%     v80L
+ 11 DON      +23.7%   4.427    1.508    5.7%       7  71.4%  +37.9%     v80L
+ 12 DIP      +23.4%   1.860    1.053   14.9%      20  30.0%  +37.4%     v80L
+ 13 DIP      +23.1%   4.049    2.332    7.0%      11  81.8%  +36.9%     v80L
+ 14 DIP      +23.1%   4.049    2.332    7.0%      11  81.8%  +36.9%     v80L
+ 15 DIP      +23.1%   3.005    1.811    8.5%      11  63.6%  +36.9%     v80L
+ 16 DIP      +23.1%   3.005    1.811    8.5%      11  63.6%  +36.9%     v80S
+ 17 DON      +23.0%   2.861    1.134    9.9%       8  50.0%  +36.7%     v80L
+ 18 DIP      +23.0%   1.509    1.057   11.8%      34  38.2%  +36.6%     v80L
+ 19 MOM      +23.0%   2.225    0.891   17.1%       8  50.0%  +36.6%     v80L
+ 20 DON      +22.7%   3.747    1.405    9.3%       8  62.5%  +36.2%     v50L
+ 21 DIP      +22.6%   2.972    1.791    8.5%      11  63.6%  +36.0%     v80L
+ 22 DIP      +22.6%   2.972    1.791    8.5%      11  63.6%  +36.0%     v80S
+ 23 DIP      +22.5%   1.627    0.983   16.4%      28  32.1%  +35.9%     v80L
+ 24 DIP      +22.3%   3.878    2.225    7.0%      12  75.0%  +35.6%     v80L
+ 25 T1       +22.0%   1.184    0.252    8.0%      18  33.3%  +35.0%     v80L
+ 26 DON      +21.9%   3.089    1.299   10.2%      10  60.0%  +34.8%     v80L
+ 27 DIP      +21.4%   1.605    1.075   12.1%      23  52.2%  +34.0%     v80L
+ 28 DIP      +21.3%   3.168    1.741    9.2%       9  66.7%  +33.9%     v80L
+ 29 DIP      +21.3%   3.168    1.741    9.2%       9  66.7%  +33.9%     v80L
+ 30 MOM      +21.3%   1.935    0.823   16.5%      10  40.0%  +33.8%     v80L
+
+[4/5] Validating top 100 on OOS (4 months)...
+
+===================================================================================================================
+  FINAL RESULTS — 4H TIMEFRAME — IS + OOS VALIDATED (sorted by combined score)
+===================================================================================================================
+  # Strat    IS Ret   OOS Ret   IS PF  OOS PF   IS DD  OOS DD  IS Tr OOS Tr   Config Params
+-------------------------------------------------------------------------------------------------------------------
+  1 DIP      +20.3%     +3.2%   5.779   1.104    5.3%   10.8%      6     11     v80L  lookback=60 dip_pct=10 recovery_pct=5 max_hold=36
+  2 DIP      +20.3%     +3.2%   5.779   1.104    5.3%   10.8%      6     11     v80S  lookback=60 dip_pct=10 recovery_pct=5 max_hold=36
+  3 T1       +29.5%     -8.3%   1.900   2.030    5.5%    8.4%     14      7     v80L  ema_fast=8 ema_slow=50 adx_threshold=30
+  4 DIP      +20.3%     -4.0%   5.779   0.840    5.3%   14.2%      6     11     v80L  lookback=60 dip_pct=10 recovery_pct=5 max_hold=72
+  5 DIP      +20.3%     -4.0%   5.779   0.840    5.3%   14.2%      6     11     v80S  lookback=60 dip_pct=10 recovery_pct=5 max_hold=72
+  6 DIP      +20.3%     -4.0%   5.779   0.840    5.3%   14.2%      6     11     v80L  lookback=60 dip_pct=10 recovery_pct=5 max_hold=144
+  7 DIP      +20.3%     -4.0%   5.779   0.840    5.3%   14.2%      6     11     v80S  lookback=60 dip_pct=10 recovery_pct=5 max_hold=144
+  8 MACD     +18.2%     -4.6%   1.309   1.082    9.8%   12.4%     47     27     v50L  macd_fast=24 macd_slow=52 macd_signal=14
+  9 DIP      +20.0%     -6.4% 23627.900   0.676    4.6%   13.9%      6     10     v80L  lookback=60 dip_pct=10 recovery_pct=3 max_hold=36
+ 10 DIP      +20.0%     -6.4% 23627.900   0.676    4.6%   13.9%      6     10     v80L  lookback=60 dip_pct=10 recovery_pct=3 max_hold=72
+ 11 DIP      +20.0%     -6.4% 23627.900   0.676    4.6%   13.9%      6     10     v80L  lookback=60 dip_pct=10 recovery_pct=3 max_hold=144
+ 12 T1       +22.0%     -8.3%   1.184   3.026    8.0%    8.4%     18      8     v80L  ema_fast=8 ema_slow=50 adx_threshold=25
+ 13 DIP      +25.7%    -13.0%   3.609   0.690    6.5%   22.3%     11     18     v80L  lookback=120 dip_pct=10 recovery_pct=5 max_hold=36
+ 14 DIP      +25.7%    -13.0%   3.609   0.690    6.5%   22.3%     11     18     v80S  lookback=120 dip_pct=10 recovery_pct=5 max_hold=36
+ 15 MACD     +26.0%    -14.2%   1.533   1.211   10.6%   19.1%     47     27     v80L  macd_fast=24 macd_slow=52 macd_signal=14
+ 16 T1       +18.3%    -11.3%   1.520   0.284    9.3%   15.4%     25     12     v80L  ema_fast=8 ema_slow=50 adx_threshold=20
+ 17 T1       +19.9%    -13.0%   1.462   0.288    9.3%   17.1%     26     12     v80L  ema_fast=8 ema_slow=50 adx_threshold=15
+ 18 DIP      +21.0%    -14.0%   2.570   0.621    6.5%   20.7%     14     19     v80L  lookback=120 dip_pct=10 recovery_pct=3 max_hold=72
+ 19 DIP      +21.0%    -14.0%   2.570   0.621    6.5%   20.7%     14     19     v80S  lookback=120 dip_pct=10 recovery_pct=3 max_hold=72
+ 20 DIP      +21.0%    -14.0%   2.570   0.621    6.5%   20.7%     14     19     v80L  lookback=120 dip_pct=10 recovery_pct=3 max_hold=144
+ 21 DIP      +21.0%    -14.0%   2.570   0.621    6.5%   20.7%     14     19     v80S  lookback=120 dip_pct=10 recovery_pct=3 max_hold=144
+ 22 DIP      +20.4%    -14.0%   2.269   0.621    7.3%   20.7%     16     19     v80L  lookback=120 dip_pct=10 recovery_pct=3 max_hold=36
+ 23 DIP      +20.4%    -14.0%   2.269   0.621    7.3%   20.7%     16     19     v80S  lookback=120 dip_pct=10 recovery_pct=3 max_hold=36
+ 24 MACD     +19.0%    -15.7%   1.174   1.232   11.8%   20.6%     47     27     v80L  macd_fast=24 macd_slow=52 macd_signal=14
+ 25 DIP      +23.1%    -18.8%   4.049   0.545    7.0%   25.1%     11     16     v80L  lookback=120 dip_pct=10 recovery_pct=3 max_hold=72
+ 26 DIP      +23.1%    -18.8%   4.049   0.545    7.0%   25.1%     11     16     v80L  lookback=120 dip_pct=10 recovery_pct=3 max_hold=144
+ 27 DIP      +22.3%    -18.8%   3.878   0.545    7.0%   25.1%     12     16     v80L  lookback=120 dip_pct=10 recovery_pct=3 max_hold=36
+ 28 DIP      +23.1%    -20.4%   3.005   0.513    8.5%   26.6%     11     17     v80L  lookback=120 dip_pct=10 recovery_pct=5 max_hold=144
+ 29 DIP      +23.1%    -20.4%   3.005   0.513    8.5%   26.6%     11     17     v80S  lookback=120 dip_pct=10 recovery_pct=5 max_hold=144
+ 30 DIP      +22.6%    -20.4%   2.972   0.513    8.5%   26.6%     11     17     v80L  lookback=120 dip_pct=10 recovery_pct=5 max_hold=72
+
+===================================================================================================================
+  ★ PROFITABLE ON BOTH IS AND OOS (4H chart, last 1 year): 2
+===================================================================================================================
+
+  #1: DIP — IS: +20.3% | OOS: +3.2%
+       IS:  PF=5.779 Sharpe=2.382 MaxDD=5.3% Trades=6 WinRate=83.3%
+       OOS: PF=1.104 Sharpe=0.161 MaxDD=10.8% Trades=11 WinRate=45.5%
+       Config: vol=80%, stop=2.0, trail=5.0, max_bars=120, long-only
+       Params: lookback=60, dip_pct=10, recovery_pct=5, max_hold=36
+
+  #2: DIP — IS: +20.3% | OOS: +3.2%
+       IS:  PF=5.779 Sharpe=2.382 MaxDD=5.3% Trades=6 WinRate=83.3%
+       OOS: PF=1.104 Sharpe=0.161 MaxDD=10.8% Trades=11 WinRate=45.5%
+       Config: vol=80%, stop=2.0, trail=4.0, max_bars=180, shorts=0.5
+       Params: lookback=60, dip_pct=10, recovery_pct=5, max_hold=36
+===================================================================================================================
+
+[5/5] Buy & Hold benchmark (4H bars):
+  IS: Return=+15.8% MaxDD=24.0%
+  OOS: Return=-38.7% MaxDD=45.5%
+  Full: Return=-29.3% MaxDD=49.8%
+
+Done.
