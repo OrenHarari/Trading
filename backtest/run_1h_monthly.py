@@ -203,6 +203,7 @@ def generate_signal_chart_html(best_result: dict, df_full: pd.DataFrame) -> str:
     sell_data = json.dumps(sell_markers)
     m = best_result["metrics"]
 
+    chart_id = f"signalChart_{hash(strat + month) % 100000}"
     return f"""
     <div class="card">
         <h2>Buy/Sell Signals: {strat} ({month}) — {m['total_return_pct']:.1f}% Return</h2>
@@ -212,13 +213,13 @@ def generate_signal_chart_html(best_result: dict, df_full: pd.DataFrame) -> str:
             <span>Trades: {m['total_trades']} | Win: {m['win_rate_pct']:.0f}% | PF: {m['profit_factor']:.2f}</span>
         </div>
         <div class="chart-container" style="height:500px;">
-            <canvas id="signalChart"></canvas>
+            <canvas id="{chart_id}"></canvas>
         </div>
     </div>
 
     <script>
     (function() {{
-        const ctx = document.getElementById('signalChart').getContext('2d');
+        const ctx = document.getElementById('{chart_id}').getContext('2d');
         const dates = {json.dumps(dates)};
         const prices = {json.dumps(prices)};
         const buys = {buy_data};

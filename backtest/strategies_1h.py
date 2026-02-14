@@ -286,6 +286,207 @@ def strategy_aggressive_breakout(df: pd.DataFrame, lookback: int = 12,
 
 
 # ============================================================
+# STRATEGY 7: Trend Pullback (buy dips in uptrends)
+# ============================================================
+def strategy_trend_pullback(df: pd.DataFrame, trend_ema: int = 50,
+                            fast_ema: int = 9, rsi_len: int = 7,
+                            rsi_oversold: float = 35, rsi_overbought: float = 65,
+                            atr_mult: float = 1.5) -> pd.DataFrame:
+    """Buy dips in uptrends, sell rallies in downtrends. High win-rate approach."""
+    close = df["close"]
+    ema_trend = ema(close, trend_ema)
+    ema_fast = ema(close, fast_ema)
+    rsi_val = rsi(close, rsi_len)
+    atr_val = atr(df, 10)
+
+    signals = pd.DataFrame(index=df.index)
+    signals["signal"] = 0
+    signals["stop_loss"] = np.nan
+
+    # Long: price above trend EMA (uptrend) + RSI dipped below oversold + now recovering
+    uptrend = close.shift(1) > ema_trend.shift(1)
+    rsi_dip = (rsi_val.shift(2) < rsi_oversold) & (rsi_val.shift(1) > rsi_val.shift(2))
+    price_above_fast = close.shift(1) > ema_fast.shift(1)
+
+    # Short: price below trend EMA (downtrend) + RSI popped above overbought + now declining
+    downtrend = close.shift(1) < ema_trend.shift(1)
+    rsi_pop = (rsi_val.shift(2) > rsi_overbought) & (rsi_val.shift(1) < rsi_val.shift(2))
+    price_below_fast = close.shift(1) < ema_fast.shift(1)
+
+    long_cond = uptrend & rsi_dip
+    short_cond = downtrend & rsi_pop
+
+    # Also enter long if fast EMA crosses above trend EMA (trend start)
+    ema_cross_up = (ema_fast.shift(1) > ema_trend.shift(1)) & (ema_fast.shift(2) <= ema_trend.shift(2))
+    ema_cross_down = (ema_fast.shift(1) < ema_trend.shift(1)) & (ema_fast.shift(2) >= ema_trend.shift(2))
+
+    signals.loc[long_cond | ema_cross_up, "signal"] = 1
+    signals.loc[short_cond | ema_cross_down, "signal"] = -1
+
+    # Exit when trend reverses
+    signals.loc[downtrend & (signals["signal"] == 1), "signal"] = 0
+    signals.loc[uptrend & (signals["signal"] == -1), "signal"] = 0
+
+    signals["stop_loss"] = np.where(
+        signals["signal"] == 1, close - atr_mult * atr_val,
+        np.where(signals["signal"] == -1, close + atr_mult * atr_val, np.nan))
+    return signals
+
+
+# ============================================================
+# STRATEGY 8: Momentum Acceleration (catch early big moves)
+# ============================================================
+def strategy_momentum_accel(df: pd.DataFrame, macd_fast: int = 8,
+                            macd_slow: int = 21, macd_sig: int = 5,
+                            adx_len: int = 10, adx_thresh: float = 20,
+                            atr_mult: float = 1.3) -> pd.DataFrame:
+    """Enter when MACD histogram accelerates with ADX confirming trend strength."""
+    close = df["close"]
+    macd_line, signal_line, hist = macd(close, macd_fast, macd_slow, macd_sig)
+    adx_val, plus_di, minus_di = adx(df, adx_len)
+    atr_val = atr(df, 10)
+    ema_20 = ema(close, 20)
+
+    signals = pd.DataFrame(index=df.index)
+    signals["signal"] = 0
+    signals["stop_loss"] = np.nan
+
+    # MACD histogram acceleration (increasing positive = bullish momentum)
+    hist_accel = hist.shift(1) > hist.shift(2)
+    hist_positive = hist.shift(1) > 0
+    hist_negative = hist.shift(1) < 0
+    hist_decel = hist.shift(1) < hist.shift(2)
+
+    # ADX showing trend strength
+    adx_strong = adx_val.shift(1) > adx_thresh
+
+    # Long: histogram positive + accelerating + ADX strong + price above EMA
+    long_cond = hist_positive & hist_accel & adx_strong & (close.shift(1) > ema_20.shift(1))
+    # Short: histogram negative + accelerating downward + ADX strong + price below EMA
+    short_cond = hist_negative & hist_decel & adx_strong & (close.shift(1) < ema_20.shift(1))
+
+    # Exit on momentum loss
+    long_exit = hist_negative | (hist_positive & hist_decel & (hist.shift(1) < hist.shift(1).rolling(5).mean()))
+    short_exit = hist_positive | (hist_negative & hist_accel & (hist.shift(1) > hist.shift(1).rolling(5).mean()))
+
+    signals.loc[long_cond, "signal"] = 1
+    signals.loc[short_cond, "signal"] = -1
+    signals.loc[long_exit & (signals["signal"] == 1), "signal"] = 0
+    signals.loc[short_exit & (signals["signal"] == -1), "signal"] = 0
+
+    signals["stop_loss"] = np.where(
+        signals["signal"] == 1, close - atr_mult * atr_val,
+        np.where(signals["signal"] == -1, close + atr_mult * atr_val, np.nan))
+    return signals
+
+
+# ============================================================
+# STRATEGY 9: Adaptive Regime (switch trend/MR based on ADX)
+# ============================================================
+def strategy_adaptive_regime(df: pd.DataFrame, adx_len: int = 14,
+                             adx_trend_thresh: float = 25, adx_range_thresh: float = 18,
+                             ema_fast: int = 9, ema_slow: int = 21,
+                             bb_len: int = 20, rsi_len: int = 7,
+                             atr_mult: float = 1.5) -> pd.DataFrame:
+    """Switch between trend-following (high ADX) and mean-reversion (low ADX)."""
+    close = df["close"]
+    adx_val, plus_di, minus_di = adx(df, adx_len)
+    ema_f = ema(close, ema_fast)
+    ema_s = ema(close, ema_slow)
+    bb_upper, bb_mid, bb_lower = bollinger_bands(close, bb_len)
+    rsi_val = rsi(close, rsi_len)
+    atr_val = atr(df, 10)
+
+    signals = pd.DataFrame(index=df.index)
+    signals["signal"] = 0
+    signals["stop_loss"] = np.nan
+
+    is_trending = adx_val.shift(1) > adx_trend_thresh
+    is_ranging = adx_val.shift(1) < adx_range_thresh
+
+    # TREND MODE: EMA crossover
+    trend_long = is_trending & (ema_f.shift(1) > ema_s.shift(1)) & (plus_di.shift(1) > minus_di.shift(1))
+    trend_short = is_trending & (ema_f.shift(1) < ema_s.shift(1)) & (minus_di.shift(1) > plus_di.shift(1))
+
+    # RANGE MODE: BB bounce with RSI
+    range_long = is_ranging & (close.shift(1) < bb_lower.shift(1)) & (rsi_val.shift(1) < 30)
+    range_short = is_ranging & (close.shift(1) > bb_upper.shift(1)) & (rsi_val.shift(1) > 70)
+
+    signals.loc[trend_long | range_long, "signal"] = 1
+    signals.loc[trend_short | range_short, "signal"] = -1
+
+    # Exit conditions per regime
+    # Trend exits: when EMA crosses back
+    trend_exit_long = is_trending & (ema_f.shift(1) < ema_s.shift(1))
+    trend_exit_short = is_trending & (ema_f.shift(1) > ema_s.shift(1))
+    # Range exits: when price returns to BB midline
+    range_exit_long = is_ranging & (close.shift(1) > bb_mid.shift(1)) & (signals["signal"] == 1)
+    range_exit_short = is_ranging & (close.shift(1) < bb_mid.shift(1)) & (signals["signal"] == -1)
+
+    signals.loc[(trend_exit_long | range_exit_long) & (signals["signal"] == 1), "signal"] = 0
+    signals.loc[(trend_exit_short | range_exit_short) & (signals["signal"] == -1), "signal"] = 0
+
+    signals["stop_loss"] = np.where(
+        signals["signal"] == 1, close - atr_mult * atr_val,
+        np.where(signals["signal"] == -1, close + atr_mult * atr_val, np.nan))
+    return signals
+
+
+# ============================================================
+# STRATEGY 10: Ensemble Vote (combine multiple indicators)
+# ============================================================
+def strategy_ensemble_vote(df: pd.DataFrame, ema_fast: int = 9,
+                           ema_slow: int = 21, rsi_len: int = 7,
+                           macd_fast: int = 12, macd_slow: int = 26,
+                           stoch_len: int = 14, bb_len: int = 20,
+                           min_votes: int = 3, atr_mult: float = 1.3) -> pd.DataFrame:
+    """Enter only when >=min_votes indicators agree on direction. High conviction."""
+    close = df["close"]
+    ema_f = ema(close, ema_fast)
+    ema_s = ema(close, ema_slow)
+    rsi_val = rsi(close, rsi_len)
+    macd_line, signal_line, hist = macd(close, macd_fast, macd_slow, 9)
+    k, d = stochastic(df, stoch_len)
+    bb_upper, bb_mid, bb_lower = bollinger_bands(close, bb_len)
+    atr_val = atr(df, 10)
+
+    signals = pd.DataFrame(index=df.index)
+    signals["signal"] = 0
+    signals["stop_loss"] = np.nan
+
+    # Vote counting (each is +1 for long, -1 for short)
+    v_ema = pd.Series(0, index=df.index)
+    v_ema[ema_f.shift(1) > ema_s.shift(1)] = 1
+    v_ema[ema_f.shift(1) < ema_s.shift(1)] = -1
+
+    v_rsi = pd.Series(0, index=df.index)
+    v_rsi[(rsi_val.shift(1) > 50) & (rsi_val.shift(1) < 80)] = 1
+    v_rsi[(rsi_val.shift(1) < 50) & (rsi_val.shift(1) > 20)] = -1
+
+    v_macd = pd.Series(0, index=df.index)
+    v_macd[hist.shift(1) > 0] = 1
+    v_macd[hist.shift(1) < 0] = -1
+
+    v_stoch = pd.Series(0, index=df.index)
+    v_stoch[(k.shift(1) > d.shift(1)) & (k.shift(1) < 80)] = 1
+    v_stoch[(k.shift(1) < d.shift(1)) & (k.shift(1) > 20)] = -1
+
+    v_bb = pd.Series(0, index=df.index)
+    v_bb[close.shift(1) > bb_mid.shift(1)] = 1
+    v_bb[close.shift(1) < bb_mid.shift(1)] = -1
+
+    total_vote = v_ema + v_rsi + v_macd + v_stoch + v_bb
+
+    signals.loc[total_vote >= min_votes, "signal"] = 1
+    signals.loc[total_vote <= -min_votes, "signal"] = -1
+
+    signals["stop_loss"] = np.where(
+        signals["signal"] == 1, close - atr_mult * atr_val,
+        np.where(signals["signal"] == -1, close + atr_mult * atr_val, np.nan))
+    return signals
+
+
+# ============================================================
 # REGISTRY
 # ============================================================
 
@@ -319,6 +520,26 @@ AGGRESSIVE_STRATEGIES = {
         "func": strategy_aggressive_breakout,
         "type": "Breakout",
         "params": {"lookback": 12, "volume_mult": 1.5, "atr_mult": 1.0},
+    },
+    "Trend Pullback": {
+        "func": strategy_trend_pullback,
+        "type": "Trend-Pullback",
+        "params": {"trend_ema": 50, "fast_ema": 9, "rsi_len": 7, "rsi_oversold": 35, "rsi_overbought": 65, "atr_mult": 1.5},
+    },
+    "Momentum Accel": {
+        "func": strategy_momentum_accel,
+        "type": "Momentum",
+        "params": {"macd_fast": 8, "macd_slow": 21, "macd_sig": 5, "adx_len": 10, "adx_thresh": 20, "atr_mult": 1.3},
+    },
+    "Adaptive Regime": {
+        "func": strategy_adaptive_regime,
+        "type": "Adaptive",
+        "params": {"adx_len": 14, "adx_trend_thresh": 25, "adx_range_thresh": 18, "ema_fast": 9, "ema_slow": 21, "bb_len": 20, "rsi_len": 7, "atr_mult": 1.5},
+    },
+    "Ensemble Vote": {
+        "func": strategy_ensemble_vote,
+        "type": "Ensemble",
+        "params": {"ema_fast": 9, "ema_slow": 21, "rsi_len": 7, "macd_fast": 12, "macd_slow": 26, "stoch_len": 14, "bb_len": 20, "min_votes": 3, "atr_mult": 1.3},
     },
 }
 
@@ -356,5 +577,28 @@ AGGRESSIVE_PARAM_VARIANTS = {
         {"lookback": 12, "volume_mult": 1.5, "atr_mult": 1.0},
         {"lookback": 6, "volume_mult": 1.0, "atr_mult": 0.7},
         {"lookback": 16, "volume_mult": 2.0, "atr_mult": 1.2},
+    ],
+    "Trend Pullback": [
+        {"trend_ema": 30, "fast_ema": 5, "rsi_len": 5, "rsi_oversold": 30, "rsi_overbought": 70, "atr_mult": 1.2},
+        {"trend_ema": 50, "fast_ema": 9, "rsi_len": 7, "rsi_oversold": 35, "rsi_overbought": 65, "atr_mult": 1.5},
+        {"trend_ema": 40, "fast_ema": 8, "rsi_len": 7, "rsi_oversold": 40, "rsi_overbought": 60, "atr_mult": 1.0},
+        {"trend_ema": 20, "fast_ema": 5, "rsi_len": 5, "rsi_oversold": 30, "rsi_overbought": 70, "atr_mult": 0.8},
+    ],
+    "Momentum Accel": [
+        {"macd_fast": 5, "macd_slow": 15, "macd_sig": 3, "adx_len": 7, "adx_thresh": 18, "atr_mult": 1.0},
+        {"macd_fast": 8, "macd_slow": 21, "macd_sig": 5, "adx_len": 10, "adx_thresh": 20, "atr_mult": 1.3},
+        {"macd_fast": 12, "macd_slow": 26, "macd_sig": 9, "adx_len": 14, "adx_thresh": 22, "atr_mult": 1.5},
+        {"macd_fast": 6, "macd_slow": 18, "macd_sig": 4, "adx_len": 8, "adx_thresh": 15, "atr_mult": 0.8},
+    ],
+    "Adaptive Regime": [
+        {"adx_len": 10, "adx_trend_thresh": 22, "adx_range_thresh": 15, "ema_fast": 5, "ema_slow": 15, "bb_len": 15, "rsi_len": 5, "atr_mult": 1.2},
+        {"adx_len": 14, "adx_trend_thresh": 25, "adx_range_thresh": 18, "ema_fast": 9, "ema_slow": 21, "bb_len": 20, "rsi_len": 7, "atr_mult": 1.5},
+        {"adx_len": 10, "adx_trend_thresh": 20, "adx_range_thresh": 15, "ema_fast": 8, "ema_slow": 21, "bb_len": 15, "rsi_len": 7, "atr_mult": 1.0},
+    ],
+    "Ensemble Vote": [
+        {"ema_fast": 5, "ema_slow": 15, "rsi_len": 5, "macd_fast": 8, "macd_slow": 21, "stoch_len": 7, "bb_len": 15, "min_votes": 3, "atr_mult": 1.0},
+        {"ema_fast": 9, "ema_slow": 21, "rsi_len": 7, "macd_fast": 12, "macd_slow": 26, "stoch_len": 14, "bb_len": 20, "min_votes": 3, "atr_mult": 1.3},
+        {"ema_fast": 5, "ema_slow": 13, "rsi_len": 5, "macd_fast": 8, "macd_slow": 17, "stoch_len": 9, "bb_len": 15, "min_votes": 4, "atr_mult": 1.5},
+        {"ema_fast": 9, "ema_slow": 21, "rsi_len": 7, "macd_fast": 12, "macd_slow": 26, "stoch_len": 14, "bb_len": 20, "min_votes": 2, "atr_mult": 1.0},
     ],
 }

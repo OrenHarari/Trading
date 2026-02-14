@@ -6,29 +6,55 @@
 
 ---
 
-## 1H MONTHLY BACKTEST RESULTS (NEW)
+## 1H MONTHLY BACKTEST RESULTS (UPDATED — 10 strategies, 6 months)
 
 ### Top Strategies — 1H Timeframe, Per Month
 
 | # | Month | Strategy | Return | PF | MaxDD | Trades | Win% | Long% | Short% |
 |---|-------|----------|--------|-----|-------|--------|------|-------|--------|
-| 1 | 2025-10 | **Aggressive Breakout** | **39.6%** | 6.36 | 8.5% | 22 | 36% | +4.8% | +35.7% |
-| 2 | 2025-10 | **RSI Momentum v1** | **36.4%** | 1.99 | 25.6% | 99 | 25% | -18.9% | +78.6% |
-| 3 | 2025-10 | **VWAP Bounce v1** | **30.4%** | 2.56 | 7.3% | 52 | 35% | +28.6% | +1.8% |
-| 4 | 2025-12 | VWAP Bounce | 11.1% | 2.35 | 3.6% | 28 | 39% | +14.5% | -2.4% |
-| 5 | 2025-10 | VWAP Bounce | 9.7% | 2.52 | 5.2% | 25 | 44% | +9.4% | +0.7% |
-| 6 | 2025-09 | VWAP Bounce | 5.6% | 1.76 | 5.6% | 32 | 16% | +5.8% | +0.4% |
+| 1 | 2025-10 | **Trend Pullback v3** | **64.1%** | 2.61 | 16.9% | 94 | 31% | -8.2% | +88.4% |
+| 2 | 2025-10 | **Trend Pullback** | **49.5%** | 2.15 | 24.2% | 76 | 33% | -7.3% | +79.6% |
+| 3 | 2025-10 | **Aggressive Breakout** | **39.6%** | 6.36 | 8.5% | 22 | 36% | +4.8% | +35.7% |
+| 4 | 2025-10 | **RSI Momentum v1** | **36.4%** | 1.99 | 25.6% | 99 | 25% | -18.9% | +78.6% |
+| 5 | 2025-10 | **VWAP Bounce v1** | **30.4%** | 2.56 | 7.3% | 52 | 35% | +28.6% | +1.8% |
+| 6 | 2025-10 | Trend Pullback v4 | 22.6% | 1.67 | 32.4% | 92 | 28% | -7.5% | +58.3% |
+| 7 | 2025-12 | VWAP Bounce | 11.1% | 2.35 | 3.6% | 28 | 39% | +14.5% | -2.4% |
+| 8 | 2025-10 | VWAP Bounce | 9.7% | 2.52 | 5.2% | 25 | 44% | +9.4% | +0.7% |
+| 9 | 2025-09 | VWAP Bounce | 5.6% | 1.76 | 5.6% | 32 | 16% | +5.8% | +0.4% |
 
-### Key Finding: VWAP Bounce is most consistent across all months
+### Key Findings
 
-| Month | B&H | VWAP Bounce | Notes |
-|-------|-----|-------------|-------|
-| Sep 2025 | +2.6% | **+5.6%** | Outperforms B&H in range market |
-| Oct 2025 | +7.3% | **+30.4%** (v1) | Strong trending month |
-| Nov 2025 | -0.9% | -2.9% | Slight loss in choppy market |
-| Dec 2025 | -1.4% | **+11.1%** | Profits while BTC drops |
-| Jan 2026 | -10.9% | **+1.3%** | Avoids crash via stops |
-| Feb 2026 | -0.9% | -5.9% | Sideways — no edge |
+**Trend Pullback** is the new top performer — **64.1% in one month** (Oct 2025):
+- Buys dips in uptrends, sells rallies in downtrends
+- Uses EMA trend direction + RSI pullback detection
+- Dominantly profitable from SHORT side (+88.4%)
+- >50% target MET in trending month
+
+**VWAP Bounce** remains most consistent across all months:
+
+| Month | B&H | VWAP Bounce | Trend Pullback | Notes |
+|-------|-----|-------------|----------------|-------|
+| Sep 2025 | +2.6% | **+5.6%** | -16.9% | VWAP better in range |
+| Oct 2025 | +7.3% | **+30.4%** (v1) | **+64.1%** (v3) | Both excellent in trend |
+| Nov 2025 | -0.9% | -2.9% | -11.4% | VWAP smaller loss |
+| Dec 2025 | -1.4% | **+11.1%** | -27.9% | VWAP profits in drop |
+| Jan 2026 | -10.9% | **+1.3%** | -14.3% | VWAP avoids crash |
+| Feb 2026 | -0.9% | -5.9% | -4.5% | Both lose in sideways |
+
+### Strategy Summary (10 strategies tested)
+
+| Strategy | Type | Best Month | Best Return | Verdict |
+|----------|------|-----------|-------------|---------|
+| **Trend Pullback** | Trend-Pullback | Oct 2025 | **+64.1%** | Best in trends, loses in chop |
+| **VWAP Bounce** | Mean-Reversion | Oct 2025 | **+30.4%** | Most consistent, safe |
+| **Aggressive Breakout** | Breakout | Oct 2025 | **+39.6%** | Strong in trends |
+| **RSI Momentum** | Momentum | Oct 2025 | **+36.4%** | Good in trends |
+| Momentum Accel | Momentum | Sep 2025 | +1.6% | Too noisy |
+| Ensemble Vote | Ensemble | Oct 2025 | +14.1% | Over-filtered |
+| BB Squeeze | Breakout | Feb 2026 | +0.4% | Too few signals |
+| Confluence | Multi-Indicator | — | — | Loses consistently |
+| Scalp EMA | Trend-Scalp | — | — | Too aggressive, huge DD |
+| Adaptive Regime | Adaptive | — | — | Needs work |
 
 ### UI Reports
 - **Main dashboard**: `results/backtest_report.html`
@@ -113,7 +139,7 @@
 backtest/
   engine.py            -> Core backtest engine (entries, exits, sizing)
   strategies.py        -> 5 strategy models (1D/4H) + param variants
-  strategies_1h.py     -> 6 aggressive 1H strategies + param variants
+  strategies_1h.py     -> 10 aggressive 1H strategies + param variants
   data_fetcher.py      -> Binance API data fetcher
   generate_data.py     -> Historical price model (fallback)
   run_backtest.py      -> Main runner (multi-TF, multi-strategy)
@@ -160,9 +186,10 @@ results/               -> Backtest output (HTML dashboard, CSV, equity curves)
 3. **MACD standalone**: Negative on all timeframes (dropped)
 
 ### Recommendations
-- **Deploy**: Donchian+MACD v1 (best risk-adjusted) or EMA+ADX v5 (best absolute return)
-- **Ensemble candidate**: Combine DIP + M1 + RSI on 4H timeframe
-- **Avoid**: Pure mean-reversion on BTC daily
+- **1D Deploy**: Donchian+MACD v1 (best risk-adjusted) or EMA+ADX v5 (best absolute return)
+- **1H Monthly**: Trend Pullback v3 for max return (64.1%) or VWAP Bounce for consistency
+- **Combo**: VWAP Bounce (steady) + Trend Pullback (trending months) as dual strategy
+- **Avoid**: Scalp EMA, Confluence, and Adaptive Regime on 1H (high drawdowns)
 
 ---
 
