@@ -6,6 +6,36 @@
 
 ---
 
+## 1H MONTHLY BACKTEST RESULTS (NEW)
+
+### Top Strategies — 1H Timeframe, Per Month
+
+| # | Month | Strategy | Return | PF | MaxDD | Trades | Win% | Long% | Short% |
+|---|-------|----------|--------|-----|-------|--------|------|-------|--------|
+| 1 | 2025-10 | **Aggressive Breakout** | **39.6%** | 6.36 | 8.5% | 22 | 36% | +4.8% | +35.7% |
+| 2 | 2025-10 | **RSI Momentum v1** | **36.4%** | 1.99 | 25.6% | 99 | 25% | -18.9% | +78.6% |
+| 3 | 2025-10 | **VWAP Bounce v1** | **30.4%** | 2.56 | 7.3% | 52 | 35% | +28.6% | +1.8% |
+| 4 | 2025-12 | VWAP Bounce | 11.1% | 2.35 | 3.6% | 28 | 39% | +14.5% | -2.4% |
+| 5 | 2025-10 | VWAP Bounce | 9.7% | 2.52 | 5.2% | 25 | 44% | +9.4% | +0.7% |
+| 6 | 2025-09 | VWAP Bounce | 5.6% | 1.76 | 5.6% | 32 | 16% | +5.8% | +0.4% |
+
+### Key Finding: VWAP Bounce is most consistent across all months
+
+| Month | B&H | VWAP Bounce | Notes |
+|-------|-----|-------------|-------|
+| Sep 2025 | +2.6% | **+5.6%** | Outperforms B&H in range market |
+| Oct 2025 | +7.3% | **+30.4%** (v1) | Strong trending month |
+| Nov 2025 | -0.9% | -2.9% | Slight loss in choppy market |
+| Dec 2025 | -1.4% | **+11.1%** | Profits while BTC drops |
+| Jan 2026 | -10.9% | **+1.3%** | Avoids crash via stops |
+| Feb 2026 | -0.9% | -5.9% | Sideways — no edge |
+
+### UI Reports
+- **Main dashboard**: `results/backtest_report.html`
+- **1H Monthly with buy/sell signals**: `results/monthly_1h/monthly_1h_report.html`
+
+---
+
 ## BACKTEST RESULTS (2024-02 to 2026-02, ~745 daily bars)
 
 ### Top Strategies — 1D Timeframe (Most Reliable)
@@ -82,15 +112,18 @@
 ```
 backtest/
   engine.py            -> Core backtest engine (entries, exits, sizing)
-  strategies.py        -> 5 strategy models + param variants
+  strategies.py        -> 5 strategy models (1D/4H) + param variants
+  strategies_1h.py     -> 6 aggressive 1H strategies + param variants
   data_fetcher.py      -> Binance API data fetcher
   generate_data.py     -> Historical price model (fallback)
   run_backtest.py      -> Main runner (multi-TF, multi-strategy)
+  run_1h_monthly.py    -> 1H monthly aggressive runner with signal charts
   report_generator.py  -> HTML dashboard generator
 data/                  -> BTC-USD price CSVs (1D, 4H, 2H)
 pinescript/            -> TradingView Pine Script strategies (6 files)
 analysis/              -> Anti-overfit toolkit (Monte Carlo, WFO, sensitivity)
 results/               -> Backtest output (HTML dashboard, CSV, equity curves)
+  monthly_1h/          -> 1H monthly reports with buy/sell signal charts
 ```
 
 ---
@@ -148,13 +181,17 @@ results/               -> Backtest output (HTML dashboard, CSV, equity curves)
 ## How To Run
 
 ```bash
-# Run full backtest
+# Run full multi-timeframe backtest (1D, 4H, 2H)
 python backtest/run_backtest.py
 
-# View HTML dashboard
-# Open results/backtest_report.html in browser
+# Run 1H monthly aggressive backtest with buy/sell signals
+python backtest/run_1h_monthly.py
 
-# Analysis suite (after CSV export)
+# View HTML dashboards
+# Open results/backtest_report.html (main dashboard)
+# Open results/monthly_1h/monthly_1h_report.html (1H monthly + signals)
+
+# Analysis suite
 python analysis/monte_carlo.py --input results/trades_parsed.csv
 python analysis/wfo_analysis.py --input results/trades_parsed.csv
 python analysis/param_sensitivity.py --grid
