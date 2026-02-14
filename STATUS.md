@@ -1,25 +1,41 @@
-# BTC/USD 1D Trading System — Project Status Dashboard
+# BTC/USD Trading System — Project Status
 
-> **Last Updated**: 2026-02-13
+> **Last Updated**: 2026-02-14
 > **Branch**: `claude/btc-trading-system-UJqNd`
-> **Phase**: Implementation (Phase 6)
+> **Phase**: 7 — Optimization Complete, Validation Next
 
 ---
 
-## Quick Reference Numbers
+## Current State Summary
 
-| Metric | Target | Current Status |
-|--------|--------|---------------|
-| Primary Score `(PF × Sharpe) / MaxDD` | > 0.10 | Pending backtest |
-| Max Drawdown | ≤ 25% | Pending backtest |
-| Minimum Trades | ≥ 120 | Pending backtest |
-| Profit Factor | > 1.3 | Pending backtest |
-| Sharpe Ratio | > 0.8 | Pending backtest |
-| CAGR | Positive | Pending backtest |
-| Win Rate | > 45% (trend) / > 55% (MR) | Pending backtest |
-| Avg Trade | > 0.3% | Pending backtest |
-| Max Consecutive Losses | < 10 | Pending backtest |
-| Exposure | 30%–70% | Pending backtest |
+Python-based backtester with 11 strategy modules, optimized on 4H and 2H timeframes.
+Daily timeframe baseline results exist but underperform. **4H is the best timeframe.**
+
+### Top Strategies (4H, In-Sample, Best Params)
+
+| Rank | Strategy | PF | Sharpe | MaxDD% | Trades | WinRate% | Notes |
+|------|----------|----|--------|--------|--------|----------|-------|
+| 1 | STR (SuperTrend) | 10.67 | 2.57 | 6.3 | 5 | 80 | ⚠️ Too few trades |
+| 2 | DIP (Dip Buy) | 2.59 | 1.90 | 9.6 | 19 | 52.6 | ✅ Good balance |
+| 3 | BKD (Breakdown) | 5.25 | 1.52 | 10.5 | 8 | 50 | ⚠️ Few trades |
+| 4 | M1 (BB+RSI MR) | 2.23 | 1.45 | 4.2 | 23 | 52.2 | ✅ Best risk-adj |
+| 5 | RSI | 1.76 | 1.31 | 9.0 | 35 | 40 | ✅ Most trades |
+| 6 | MOM (Momentum) | 2.84 | 1.12 | 18.1 | 8 | 50 | ⚠️ Few trades |
+| 7 | DON (Donchian) | 2.01 | 0.92 | 12.6 | 13 | 53.8 | OK |
+| 8 | MP (Multi-Period) | 1.83 | 0.92 | 12.7 | 17 | 41.2 | OK |
+| 9 | SMA | 2.23 | 0.86 | 10.0 | 13 | 61.5 | OK |
+| 10 | T1 (EMA+ADX) | 1.96 | 0.78 | 5.1 | 7 | 42.9 | ⚠️ Few trades |
+| 11 | MACD | 0.98 | -0.09 | 32.8 | 126 | 30.2 | ❌ Losing |
+
+### Daily Timeframe Baseline (Default Params)
+
+| Strategy | PF | Sharpe | MaxDD% | Trades | Score |
+|----------|----|--------|--------|--------|-------|
+| T1 | 1.33 | 0.88 | 15.5 | 28 | 0.076 |
+| M1 | 0.68 | -1.37 | 11.1 | 50 | -0.085 |
+| H1 | 0.78 | -0.94 | 7.7 | 13 | -0.095 |
+| H2 (Blend) | 0.79 | -0.85 | 10.2 | 28 | -0.067 |
+| Buy & Hold | — | — | 76.7 | 1 | — |
 
 ---
 
@@ -27,45 +43,50 @@
 
 | Phase | Description | Status |
 |-------|-------------|--------|
-| Phase 0 | Operating Rules | Done |
-| Phase 1 | Market Structure & Hypotheses | Done |
-| Phase 2 | Data & Backtest Spec | Done |
-| Phase 3 | Regime Detection Design | Done |
-| Phase 4 | Strategy Candidates | Done |
-| Phase 5 | Anti-Overfit Toolkit Design | Done |
-| Phase 6 | Implementation | **In Progress** |
-| Phase 7 | Reporting & Validation | Pending backtest data |
+| 1 | Market hypotheses | ✅ Done |
+| 2 | Data collection & backtest spec | ✅ Done |
+| 3 | Regime detection design | ✅ Done |
+| 4 | Strategy candidates (11 strategies) | ✅ Done |
+| 5 | Python backtester engine | ✅ Done |
+| 6 | Optimizer (grid search, IS/OOS) | ✅ Done |
+| 7 | Multi-timeframe optimization (4H, 2H) | ✅ Done |
+| 8 | **Strategy combination / ensemble** | 🔲 Next |
+| 9 | Walk-forward validation | 🔲 Pending |
+| 10 | Monte Carlo / param sensitivity | 🔲 Pending |
+| 11 | Final validation & go-live decision | 🔲 Pending |
 
 ---
 
-## Backtest Configuration
+## Architecture
 
-| Parameter | Value |
-|-----------|-------|
-| Instrument | BTCUSD 1D (BITSTAMP or INDEX on TradingView) |
-| Initial Capital | $100,000 |
-| Direction | Long + Short (shorts at 0.5× size) |
-| Position Sizing | Volatility-targeted (30% annual vol target) |
-| Commission | 0.05% per side |
-| Slippage | 5 ticks per side |
-| Total Round-Trip Cost | ~0.20% |
-| Execution | Next-bar open (`process_orders_on_close=false`) |
-| Warm-up | 400 bars (no trades) |
-| IS Window | 50% of data (bars 400–1399) |
-| OOS Window | 30% of data (bars 1400–1999) |
+```
+data/                  → BTC-USD price CSVs (daily, 4h, 2h)
+backtester/
+  engine.py            → Core backtest engine (handles entries, exits, sizing)
+  strategies.py        → 11 strategy modules (T1, M1, H1, DIP, DON, etc.)
+  indicators.py        → Technical indicator calculations
+  data_loader.py       → CSV loading & preprocessing
+optimizer.py           → Grid search optimizer (daily)
+optimizer_4h.py        → 4H timeframe optimizer
+opt_single.py          → Single-strategy optimizer
+opt_combine.py         → Multi-strategy combination optimizer
+opt_results_4h/        → Optimization results per strategy (4H)
+opt_results_2h/        → Optimization results per strategy (2H)
+results/               → Backtest output (equity curves, trades)
+run_backtest.py        → Run strategies with specific params
+dashboard.py           → Web UI for viewing results
+analysis/              → Anti-overfit toolkit (Monte Carlo, WFO, sensitivity)
+pinescript/            → TradingView Pine Script versions (reference only)
+```
 
 ---
 
-## Strategy Rankings
+## Key Decisions Made
 
-| Rank | Strategy | File | Type | Expected Sharpe | Expected PF |
-|------|----------|------|------|----------------|-------------|
-| 1 | **H2 Adaptive Blend** | `main_strategy.pine` | Hybrid | 1.2–1.6 | 1.5–2.0 |
-| 2 | T1 EMA + ADX | `strategy_t1_ema_crossover.pine` | Trend | 1.0–1.4 | 1.4–1.8 |
-| 3 | H1 Squeeze Breakout | `strategy_h1_squeeze.pine` | Hybrid | 0.9–1.3 | 1.3–1.7 |
-| 4 | T2 Donchian | `strategy_t2_donchian.pine` | Trend | 0.8–1.2 | 1.3–1.6 |
-| 5 | M1 BB + RSI | `strategy_m1_bb_rsi.pine` | Mean-Rev | 0.7–1.0 | 1.2–1.5 |
-| 6 | M2 VWMA | `strategy_m2_vwma.pine` | Mean-Rev | 0.6–0.9 | 1.1–1.4 |
+1. **Timeframe**: 4H > Daily for most strategies (more trades, better Sharpe)
+2. **Best candidates for ensemble**: DIP, M1, RSI (good trade count + metrics)
+3. **Dropped**: MACD (negative on all timeframes)
+4. **Risky**: STR, BKD, MOM — great metrics but too few trades (<10)
 
 ---
 
@@ -73,76 +94,61 @@
 
 | Test | Pass Criteria | Status |
 |------|--------------|--------|
-| Walk-Forward (12 folds) | OOS Score ≥ 60% of IS | Pending |
-| Parameter Sensitivity | Score within ±30% at ±20% param change | Pending |
-| Monte Carlo (1000 resamples) | 95th pctile DD ≤ 25%, 5th pctile return > 0% | Pending |
-| Regime Stress | No regime PF < 0.9 | Pending |
-| Cost Stress (2×) | PF > 1.0 at 0.40% RT cost | Pending |
+| Walk-Forward (12 folds) | OOS Score ≥ 60% of IS | 🔲 Pending |
+| Parameter Sensitivity | Score ±30% at ±20% param change | 🔲 Pending |
+| Monte Carlo (1000 sims) | 95th pctile DD ≤ 25%, 5th pctile ret > 0% | 🔲 Pending |
+| OOS Backtest | Run best params on OOS period | 🔲 Pending |
+| Cost Stress (2×) | PF > 1.0 at 0.40% RT cost | 🔲 Pending |
 
 ---
 
-## File Inventory
+## Backtest Configuration
 
-### Pine Script (`/pinescript/`)
-| File | Description | Status |
-|------|-------------|--------|
-| `main_strategy.pine` | H2 Adaptive Blend — primary strategy | Building |
-| `strategy_t1_ema_crossover.pine` | Dual EMA + ADX trend-follower | Building |
-| `strategy_m1_bb_rsi.pine` | Bollinger Band + RSI mean-reversion | Building |
-| `strategy_h1_squeeze.pine` | BB/KC Squeeze Breakout | Building |
-| `strategy_t2_donchian.pine` | Donchian Channel Breakout | Building |
-| `strategy_m2_vwma.pine` | VWMA Reversion + Stochastic | Building |
-
-### Analysis (`/analysis/`)
-| File | Description | Status |
-|------|-------------|--------|
-| `monte_carlo.py` | Bootstrap resampling of trade P&L | Building |
-| `wfo_analysis.py` | Walk-forward fold analysis | Building |
-| `param_sensitivity.py` | Parameter grid sweep | Building |
-| `trade_export_parser.py` | Parse TradingView CSV exports | Building |
-| `requirements.txt` | Python dependencies | Building |
+| Parameter | Value |
+|-----------|-------|
+| Instrument | BTC/USD |
+| Timeframes | Daily, 4H, 2H |
+| Initial Capital | $100,000 |
+| Commission | 0.05% per side |
+| Slippage | Built into execution |
+| Position Sizing | Volatility-targeted |
+| Data Source | CSV files in `data/` |
 
 ---
 
-## How to Use
+## Next Steps
 
-### TradingView Setup
-1. Open TradingView → Pine Editor
-2. Copy contents of desired `.pine` file
-3. Apply to **BTCUSD 1D** chart (BITSTAMP:BTCUSD recommended)
-4. Check Strategy Tester tab for results
-5. Export trade list to CSV for Python analysis
+1. **Combine top strategies** (DIP + M1 + RSI) into ensemble on 4H
+2. **Run OOS validation** — test best params on held-out data
+3. **Walk-forward analysis** — rolling IS/OOS windows
+4. **Parameter sensitivity** — check fragility of optimal params
+5. **Monte Carlo** — bootstrap confidence intervals
+6. Go/No-Go decision based on validation results
 
-### Running Analysis (after CSV export)
+---
+
+## How To Run
+
 ```bash
-cd /home/user/Trading/analysis
+# Install dependencies
 pip install -r requirements.txt
-python trade_export_parser.py --input ../results/trades.csv
-python monte_carlo.py --input ../results/trades_parsed.csv
-python wfo_analysis.py --input ../results/trades_parsed.csv
-python param_sensitivity.py --input ../results/trades_parsed.csv
+
+# Run backtest with default params
+python run_backtest.py
+
+# Run optimizer for a single strategy on 4H
+python opt_single.py --strategy DIP --timeframe 4h
+
+# Run all optimizations
+bash opt_run_all.sh
+
+# View dashboard
+python dashboard.py
+
+# Check project status
+cat STATUS.md
 ```
 
 ---
 
-## Hypotheses Under Test
-
-| ID | Hypothesis | Status |
-|----|-----------|--------|
-| H1 | BTC trends persist (ADX>25 + EMA → continues 20+ bars) | Testing via T1/H2 |
-| H2 | Mean reversion in low-ADX regimes (BB touch → SMA revert) | Testing via M1/H2 |
-| H3 | Vol compression precedes expansion (squeeze → 5%+ move) | Testing via H1 |
-| H4 | Halving cycle long bias (post-halving long-only outperforms) | Structural in sizing |
-| H5 | Day-of-week seasonality | Not yet implemented |
-
----
-
-## Next Steps (What To Do After Backtest)
-
-1. Load `main_strategy.pine` on BTCUSD 1D → record all metrics in table above
-2. Load each standalone strategy → compare against H2
-3. Export trades to CSV → run Python analysis suite
-4. Fill in anti-overfit checklist results
-5. Make GO/NO-GO decision based on final scorecard
-6. If GO: consider multi-timeframe confirmation, walk-forward re-optimization
-7. If NO-GO: identify weakest component and redesign
+*This file is the single source of truth. Update it after every significant change.*
